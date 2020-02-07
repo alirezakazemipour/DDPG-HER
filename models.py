@@ -20,6 +20,7 @@ class Actor(nn.Module):
         self.fc1 = nn.Linear(in_features=self.n_states, out_features=self.n_hidden1)
         self.fc2 = nn.Linear(in_features=self.n_hidden1, out_features=self.n_hidden2)
         self.fc3 = nn.Linear(in_features=self.n_hidden2, out_features=1)
+        self.tanh = nn.Tanh()
 
         self.fc1.weight.data = init_weights_biases(self.fc1.weight.data.size())
         self.fc1.bias.data = init_weights_biases(self.fc1.bias.data.size())
@@ -32,7 +33,7 @@ class Actor(nn.Module):
     def forward(self, x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        output = F.tanh(self.fc3(x))
+        output = self.tanh(self.fc3(x))
 
         return output
 

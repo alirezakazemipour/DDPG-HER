@@ -82,7 +82,7 @@ class Agent:
 
     @staticmethod
     def soft_update_networks(local_model, target_model, tau=0.001):
-        for t_params, e_params in zip[target_model.parameters(), local_model.parametrs]:
+        for t_params, e_params in zip(target_model.parameters(), local_model.parameters()):
             t_params.data.copy_(tau * e_params.data + (1 - tau) * t_params.data)
 
     def unpack_batch(self, batch):
@@ -91,8 +91,8 @@ class Agent:
 
         states = torch.cat(batch.state).to(self.device).view(self.batch_size, *self.n_states)
         actions = torch.cat(batch.action).to(self.device).view((-1, 1))
-        rewards = torch.cat(batch.reward).to(self.device)
-        dones = torch.cat(batch.done).to(self.device)
+        rewards = torch.cat(batch.reward).to(self.device).view(self.batch_size, 1)
+        dones = torch.cat(batch.done).to(self.device).view(self.batch_size, 1)
         next_states = torch.cat(batch.next_state).to(self.device).view(self.batch_size, *self.n_states)
 
         return states, actions, rewards, dones, next_states
@@ -104,7 +104,7 @@ class Agent:
         states, actions, rewards, dones, next_states = self.unpack_batch(batch)
 
         target_q = self.critic_target(states, self.actor_target(next_states))
-        target_returns = rewards + (1 - dones) * target_q * self.gamma
+        target_returns = rewards + self.gamma * target_q * (1 - dones)
 
         q_eval = self.critic(states, actions)
         critic_loss = self.critic_loss_fn(target_returns.view(self.batch_size, 1), q_eval)

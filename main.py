@@ -1,9 +1,11 @@
 import gym
 from agent import Agent
 
-ENV_NAME = "MountainCarContinuous-v0"
+# ENV_NAME = "MountainCarContinuous-v0"
+ENV_NAME = "Pendulum-v0"
 INTRO = False
 MAX_EPISODES = 200
+MAX_STEPS_PER_EPISODE = 500
 memory_size = 10000
 batch_size = 64
 
@@ -39,7 +41,7 @@ else:
         ep_actor_loss = 0
         ep_critic_loss = 0
         done = False
-        while not done:
+        for step in range(MAX_STEPS_PER_EPISODE):
             action = agent.choose_action(state)
             next_state, reward, done, _ = env.step(action)
             agent.store(state, reward, done, action, next_state)
@@ -50,12 +52,11 @@ else:
             if done:
                 break
             state = next_state
-    if episode == 0:
-        global_running_r.append(episode_reward)
-    else:
-        global_running_r.append(global_running_r[-1] * 0.99 + 0.01 * episode_reward)
+        if episode == 0:
+            global_running_r.append(episode_reward)
+        else:
+            global_running_r.append(global_running_r[-1] * 0.99 + 0.01 * episode_reward)
 
-    print(f"EP{episode}| "
-          f"EP_running_r{global_running_r[-1]:.3f}| "
-          f"EP_critic_loss:{ep_critic_loss:.3f}| "
-          f"EP_actor_loss:{ep_actor_loss:.3f}")
+        print(f"EP{episode}| "
+              f"EP_running_r:{global_running_r[-1]:.3f}| "
+              f"EP_reward:{episode_reward:.3f}| ")
