@@ -4,6 +4,7 @@ from agent import Agent
 ENV_NAME = "MountainCarContinuous-v0"
 INTRO = False
 MAX_EPISODES = 200
+memory_size= 10000
 
 test_env = gym.make(ENV_NAME)
 state_shape = test_env.observation_space.shape
@@ -23,7 +24,7 @@ if INTRO:
             test_env.render()
 else:
     env = gym.make(ENV_NAME)
-    agent = Agent(n_states=state_shape, action_bounds=action_bounds)
+    agent = Agent(n_states=state_shape, action_bounds=action_bounds, capacity=memory_size)
     total_reward = 0
     for episode in range(MAX_EPISODES):
         agent.reset_randomness()
@@ -33,7 +34,7 @@ else:
         while not done:
             action = agent.choose_action(state)
             next_state, reward, done, _ = env.step(action)
-            agent.store(state, reward, done, next_state)
+            agent.store(state, reward, done, action, next_state)
             episode_reward += reward
             if done:
                 break
