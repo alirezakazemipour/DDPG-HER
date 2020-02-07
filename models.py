@@ -1,16 +1,17 @@
 from torch import nn
 import torch
 from torch.nn import functional as F
+import numpy as np
 
 
 def init_weights_biases(size):
-    v = 1.0 / torch.sqrt(size[0])
+    v = 1.0 / np.sqrt(size[0])
     return torch.FloatTensor(size).uniform_(-v, v)
 
 
 class Actor(nn.Module):
     def __init__(self, n_states, n_hidden1=400, n_hidden2=300, initial_w=3e-3):
-        self.n_states = n_states
+        self.n_states = n_states[0]
         self.n_hidden1 = n_hidden1
         self.n_hidden2 = n_hidden2
         self.initial_w = initial_w
@@ -38,7 +39,7 @@ class Actor(nn.Module):
 
 class Critic(nn.Module):
     def __init__(self, n_states, n_hidden1=400, n_hidden2=300, initial_w=3e-3, action_size=1):
-        self.n_states = n_states
+        self.n_states = n_states[0]
         self.n_hidden1 = n_hidden1
         self.n_hidden2 = n_hidden2
         self.initial_w = initial_w
