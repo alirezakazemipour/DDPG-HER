@@ -4,10 +4,14 @@ from agent import Agent
 # ENV_NAME = "MountainCarContinuous-v0"
 ENV_NAME = "Pendulum-v0"
 INTRO = False
-MAX_EPISODES = 200
+MAX_EPISODES = 500
 MAX_STEPS_PER_EPISODE = 500
-memory_size = 10000
+memory_size = 100000
 batch_size = 64
+actor_lr = 1e-4
+critic_lr = 1e-3
+gamma = 0.99
+tau = 0.001
 
 test_env = gym.make(ENV_NAME)
 state_shape = test_env.observation_space.shape
@@ -31,7 +35,11 @@ else:
                   action_bounds=action_bounds,
                   capacity=memory_size,
                   action_size=n_actions,
-                  batch_size=batch_size)
+                  batch_size=batch_size,
+                  actor_lr=actor_lr,
+                  critic_lr=critic_lr,
+                  gamma=gamma,
+                  tau=tau)
     # total_reward = 0
     global_running_r = []
     for episode in range(MAX_EPISODES):
@@ -57,6 +65,6 @@ else:
         else:
             global_running_r.append(global_running_r[-1] * 0.99 + 0.01 * episode_reward)
 
-        print(f"EP{episode}| "
+        print(f"EP:{episode}| "
               f"EP_running_r:{global_running_r[-1]:.3f}| "
               f"EP_reward:{episode_reward:.3f}| ")

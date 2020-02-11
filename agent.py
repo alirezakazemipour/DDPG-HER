@@ -27,12 +27,12 @@ class Agent:
         # self.actor_target.eval()
         # self.critic_target.eval()
         self.init_target_networks()
-        self.training_mode = True
+        self.training_mode = 1
         self.tau = tau
         self.gamma = gamma
 
         self.epsilon = 1
-        self.epsilon_decay = 0.05
+        self.epsilon_decay = 0.5
         self.random_process = OrnsteinUhlenbeckProcess()
         self.capacity = capacity
         self.memory = Meomory(self.capacity)
@@ -40,7 +40,7 @@ class Agent:
         self.batch_size = batch_size
         self.actor_lr = actor_lr
         self.critic_lr = critic_lr
-        self.actor_optim = Adam(self.actor.parameters(), self.actor_lr, weight_decay=1e-2)
+        self.actor_optim = Adam(self.actor.parameters(), self.actor_lr)
         self.critic_optim = Adam(self.critic.parameters(), self.critic_lr, weight_decay=1e-2)
 
         self.critic_loss_fn = torch.nn.MSELoss()
@@ -49,7 +49,10 @@ class Agent:
         state = np.expand_dims(state, axis=0)
         state = from_numpy(state).float().to(self.device)
 
-        action = self.actor(state)[0].detach().cpu().numpy()
+        self.actor.eval()
+        with torch.no_grad():
+            action = self.actor(state)[0].cpu().data.numpy()
+        self.actor.train()
 
         if self.training_mode:
             action += max(self.epsilon, 0) * self.random_process.sample()
@@ -81,7 +84,7 @@ class Agent:
         target_model.eval()
 
     @staticmethod
-    def soft_update_networks(local_model, target_model, tau=0.001):
+    def soft_update_networks(local_model, target_model, tau=0.01):
         for t_params, e_params in zip(target_model.parameters(), local_model.parameters()):
             t_params.data.copy_(tau * e_params.data + (1 - tau) * t_params.data)
 
@@ -102,9 +105,9 @@ class Agent:
             return 0, 0
         batch = self.memory.sample(self.batch_size)
         states, actions, rewards, dones, next_states = self.unpack_batch(batch)
-
-        target_q = self.critic_target(states, self.actor_target(next_states))
-        target_returns = rewards + self.gamma * target_q * (1 - dones)
+        with torch.no_grad():
+            target_q = self.critic_target(next_states, self.actor_target(next_states))
+            target_returns = rewards + self.gamma * target_q * (1.0 - dones)
 
         q_eval = self.critic(states, actions)
         critic_loss = self.critic_loss_fn(target_returns.view(self.batch_size, 1), q_eval)
