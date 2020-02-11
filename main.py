@@ -68,23 +68,24 @@ else:
             global_running_r.append(episode_reward)
         else:
             global_running_r.append(global_running_r[-1] * 0.99 + 0.01 * episode_reward)
-            total_ac_loss.append(ep_actor_loss)
-            total_cr_loss.append(ep_critic_loss)
+        total_ac_loss.append(ep_actor_loss)
+        total_cr_loss.append(ep_critic_loss)
 
         print(f"EP:{episode}| "
               f"EP_running_r:{global_running_r[-1]:.3f}| "
               f"EP_reward:{episode_reward:.3f}| ")
 
     plt.figure()
-    plt.subplot(31)
-    plt.plot(np.arange(0, MAX_EPISODES * MAX_STEPS_PER_EPISODE), global_running_r)
+    plt.subplot(311)
+    plt.plot(np.arange(0, MAX_EPISODES), global_running_r)
     plt.title("Reward")
 
-    plt.plot(np.arange(0, MAX_EPISODES * MAX_STEPS_PER_EPISODE), total_ac_loss)
+    plt.subplot(312)
+    plt.plot(np.arange(0, MAX_EPISODES), total_ac_loss)
     plt.title("Actor loss")
 
-    plt.subplot(213)
-    plt.plot(np.arange(0, MAX_EPISODES * MAX_STEPS_PER_EPISODE), total_cr_loss)
+    plt.subplot(313)
+    plt.plot(np.arange(0, MAX_EPISODES), total_cr_loss)
     plt.title("Critic loss")
 
     plt.show()
