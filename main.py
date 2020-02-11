@@ -6,7 +6,7 @@ import numpy as np
 # ENV_NAME = "MountainCarContinuous-v0"
 ENV_NAME = "Pendulum-v0"
 INTRO = False
-MAX_EPISODES = 2000
+MAX_EPISODES = 1000
 MAX_STEPS_PER_EPISODE = 500
 memory_size = 100000
 batch_size = 64
@@ -44,6 +44,8 @@ else:
                   tau=tau)
     # total_reward = 0
     global_running_r = []
+    total_ac_loss = []
+    total_cr_loss =[]
     for episode in range(MAX_EPISODES):
         agent.reset_randomness()
         state = env.reset()
@@ -66,10 +68,23 @@ else:
             global_running_r.append(episode_reward)
         else:
             global_running_r.append(global_running_r[-1] * 0.99 + 0.01 * episode_reward)
+            total_ac_loss.append(ep_actor_loss)
+            total_cr_loss.append(ep_critic_loss)
 
         print(f"EP:{episode}| "
               f"EP_running_r:{global_running_r[-1]:.3f}| "
               f"EP_reward:{episode_reward:.3f}| ")
+
+    plt.figure()
+    plt.subplot(31)
     plt.plot(np.arange(0, MAX_EPISODES * MAX_STEPS_PER_EPISODE), global_running_r)
     plt.title("Reward")
+
+    plt.plot(np.arange(0, MAX_EPISODES * MAX_STEPS_PER_EPISODE), total_ac_loss)
+    plt.title("Actor loss")
+
+    plt.subplot(213)
+    plt.plot(np.arange(0, MAX_EPISODES * MAX_STEPS_PER_EPISODE), total_cr_loss)
+    plt.title("Critic loss")
+
     plt.show()
