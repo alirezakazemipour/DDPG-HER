@@ -7,8 +7,8 @@ from play import Play
 # ENV_NAME = "MountainCarContinuous-v0"
 ENV_NAME = "Pendulum-v0"
 INTRO = False
-MAX_EPISODES = 1#1000
-MAX_STEPS_PER_EPISODE = 1#500
+MAX_EPISODES = 1000
+MAX_STEPS_PER_EPISODE = 500
 memory_size = 100000
 batch_size = 64
 actor_lr = 1e-4
