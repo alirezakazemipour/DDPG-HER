@@ -2,12 +2,13 @@ import gym
 from agent import Agent
 import matplotlib.pyplot as plt
 import numpy as np
+from play import Play
 
 # ENV_NAME = "MountainCarContinuous-v0"
 ENV_NAME = "Pendulum-v0"
 INTRO = False
-MAX_EPISODES = 1000
-MAX_STEPS_PER_EPISODE = 500
+MAX_EPISODES = 1#1000
+MAX_STEPS_PER_EPISODE = 1#500
 memory_size = 100000
 batch_size = 64
 actor_lr = 1e-4
@@ -74,6 +75,10 @@ else:
         print(f"EP:{episode}| "
               f"EP_running_r:{global_running_r[-1]:.3f}| "
               f"EP_reward:{episode_reward:.3f}| ")
+
+    agent.save_weights()
+    player = Play(env, agent)
+    player.evaluate()
 
     plt.figure()
     plt.subplot(311)

@@ -127,3 +127,16 @@ class Agent:
         self.soft_update_networks(self.critic, self.critic_target)
 
         return actor_loss, critic_loss
+
+    def save_weights(self):
+        torch.save(self.actor.state_dict(), "./actor_weights.pth")
+        torch.save(self.critic.state_dict(), "./critic_weights.pth")
+
+    def load_weights(self):
+        self.actor.load_state_dict(torch.load("./actor_weights.pth"))
+        self.critic.load_state_dict(torch.load("./critic_weights.pth"))
+
+    def set_to_eval_mode(self):
+        self.actor.eval()
+        self.critic.eval()
+
