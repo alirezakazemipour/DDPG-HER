@@ -8,7 +8,7 @@ from torch.optim import Adam
 
 
 class Agent:
-    def __init__(self, n_states, action_bounds, capacity,
+    def __init__(self, n_states, n_actions, action_bounds, capacity,
                  batch_size,
                  action_size=1,
                  tau=0.001,
@@ -17,12 +17,13 @@ class Agent:
                  gamma=0.99):
         self.device = device("cuda" if torch.cuda.is_available() else "cpu")
         self.n_states = n_states
+        self.n_actions = n_actions
         self.action_bounds = action_bounds
         self.action_size = action_size
 
-        self.actor = Actor(self.n_states).to(self.device)
+        self.actor = Actor(self.n_states, n_actions=self.n_actions).to(self.device)
         self.critic = Critic(self.n_states, action_size=self.action_size).to(self.device)
-        self.actor_target = Actor(self.n_states).to(self.device)
+        self.actor_target = Actor(self.n_states, n_actions=self.n_actions).to(self.device)
         self.critic_target = Critic(self.n_states, action_size=self.action_size).to(self.device)
         # self.actor_target.eval()
         # self.critic_target.eval()
@@ -93,7 +94,7 @@ class Agent:
         batch = Transition(*zip(*batch))
 
         states = torch.cat(batch.state).to(self.device).view(self.batch_size, *self.n_states)
-        actions = torch.cat(batch.action).to(self.device).view((-1, 1))
+        actions = torch.cat(batch.action).to(self.device).view((-1, self.n_actions))
         rewards = torch.cat(batch.reward).to(self.device).view(self.batch_size, 1)
         dones = torch.cat(batch.done).to(self.device).view(self.batch_size, 1)
         next_states = torch.cat(batch.next_state).to(self.device).view(self.batch_size, *self.n_states)
