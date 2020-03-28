@@ -3,7 +3,7 @@ import random
 from collections import namedtuple
 
 Transition = namedtuple("Transition",
-                        ("state", "reward", "done", "action", "next_state"))
+                        ("state", "reward", "done", "action", "next_state", "goal"))
 
 
 class Meomory:

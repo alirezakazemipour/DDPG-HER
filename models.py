@@ -10,15 +10,16 @@ def init_weights_biases(size):
 
 
 class Actor(nn.Module):
-    def __init__(self, n_states, n_actions, n_hidden1=400, n_hidden2=300, initial_w=3e-3):
+    def __init__(self, n_states, n_actions, n_goals, n_hidden1=400, n_hidden2=300, initial_w=3e-3):
         self.n_states = n_states[0]
         self.n_actions = n_actions
+        self.n_goals = n_goals
         self.n_hidden1 = n_hidden1
         self.n_hidden2 = n_hidden2
         self.initial_w = initial_w
         super(Actor, self).__init__()
 
-        self.fc1 = nn.Linear(in_features=self.n_states, out_features=self.n_hidden1)
+        self.fc1 = nn.Linear(in_features=self.n_states + self.n_goals, out_features=self.n_hidden1)
         self.fc2 = nn.Linear(in_features=self.n_hidden1, out_features=self.n_hidden2)
         self.fc3 = nn.Linear(in_features=self.n_hidden2, out_features=self.n_actions)
         self.tanh = nn.Tanh()
@@ -31,8 +32,8 @@ class Actor(nn.Module):
         self.fc3.weight.data.uniform_(-self.initial_w, self.initial_w)
         self.fc3.bias.data.uniform_(-self.initial_w, self.initial_w)
 
-    def forward(self, x):
-        x = F.relu(self.fc1(x))
+    def forward(self, x, g):
+        x = F.relu(self.fc1(torch.cat([x, g], dim=-1)))
         x = F.relu(self.fc2(x))
         output = self.tanh(self.fc3(x))
 
@@ -40,15 +41,16 @@ class Actor(nn.Module):
 
 
 class Critic(nn.Module):
-    def __init__(self, n_states, n_hidden1=400, n_hidden2=300, initial_w=3e-3, action_size=1):
+    def __init__(self, n_states, n_goals, n_hidden1=400, n_hidden2=300, initial_w=3e-3, action_size=1):
         self.n_states = n_states[0]
+        self.n_goals = n_goals
         self.n_hidden1 = n_hidden1
         self.n_hidden2 = n_hidden2
         self.initial_w = initial_w
         self.action_size = action_size
         super(Critic, self).__init__()
 
-        self.fc1 = nn.Linear(in_features=self.n_states, out_features=self.n_hidden1)
+        self.fc1 = nn.Linear(in_features=self.n_states + self.n_goals, out_features=self.n_hidden1)
         self.fc2 = nn.Linear(in_features=self.n_hidden1 + self.action_size, out_features=self.n_hidden2)
         self.fc3 = nn.Linear(in_features=self.n_hidden2, out_features=1)
 
@@ -60,8 +62,8 @@ class Critic(nn.Module):
         self.fc3.weight.data.uniform_(-self.initial_w, self.initial_w)
         self.fc3.bias.data.uniform_(-self.initial_w, self.initial_w)
 
-    def forward(self, x, a):
-        x = F.relu(self.fc1(x))
+    def forward(self, x, g, a):
+        x = F.relu(self.fc1(torch.cat([x, g], dim=-1)))
         x = F.relu(self.fc2(torch.cat([x, a], dim=1)))
         output = self.fc3(x)
 

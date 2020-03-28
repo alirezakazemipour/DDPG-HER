@@ -8,7 +8,7 @@ from torch.optim import Adam
 
 
 class Agent:
-    def __init__(self, n_states, n_actions, action_bounds, capacity,
+    def __init__(self, n_states, n_actions, n_goals, action_bounds, capacity,
                  batch_size,
                  action_size=1,
                  tau=0.001,
@@ -18,13 +18,14 @@ class Agent:
         self.device = device("cuda" if torch.cuda.is_available() else "cpu")
         self.n_states = n_states
         self.n_actions = n_actions
+        self.n_goals = n_goals
         self.action_bounds = action_bounds
         self.action_size = action_size
 
-        self.actor = Actor(self.n_states, n_actions=self.n_actions).to(self.device)
-        self.critic = Critic(self.n_states, action_size=self.action_size).to(self.device)
-        self.actor_target = Actor(self.n_states, n_actions=self.n_actions).to(self.device)
-        self.critic_target = Critic(self.n_states, action_size=self.action_size).to(self.device)
+        self.actor = Actor(self.n_states, n_actions=self.n_actions, n_goals=self.n_goals).to(self.device)
+        self.critic = Critic(self.n_states, action_size=self.action_size, n_goals=self.n_goals).to(self.device)
+        self.actor_target = Actor(self.n_states, n_actions=self.n_actions, n_goals=self.n_goals).to(self.device)
+        self.critic_target = Critic(self.n_states, action_size=self.action_size, n_goals=self.n_goals).to(self.device)
         # self.actor_target.eval()
         # self.critic_target.eval()
         self.init_target_networks()
@@ -46,13 +47,15 @@ class Agent:
 
         self.critic_loss_fn = torch.nn.MSELoss()
 
-    def choose_action(self, state):
+    def choose_action(self, state, goal):
         state = np.expand_dims(state, axis=0)
         state = from_numpy(state).float().to(self.device)
+        goal = np.expand_dims(goal, axis=0)
+        goal = from_numpy(goal).float().to(self.device)
 
         self.actor.eval()
         with torch.no_grad():
-            action = self.actor(state)[0].cpu().data.numpy()
+            action = self.actor(state, goal)[0].cpu().data.numpy()
         self.actor.train()
 
         if self.training_mode:
@@ -66,14 +69,15 @@ class Agent:
     def reset_randomness(self):
         self.random_process.reset_states()
 
-    def store(self, state, reward, done, action, next_state):
+    def store(self, state, reward, done, action, next_state, goal):
         state = from_numpy(state).float().to("cpu")
         reward = torch.FloatTensor([reward])
         done = torch.Tensor([done])
         next_state = from_numpy(next_state).float().to("cpu")
+        goal = from_numpy(goal).float().to("cpu")
         action = from_numpy(action)
 
-        self.memory.add(state, reward, done, action, next_state)
+        self.memory.add(state, reward, done, action, next_state, goal)
 
     def init_target_networks(self):
         self.hard_update_networks(self.actor, self.actor_target)
@@ -98,26 +102,27 @@ class Agent:
         rewards = torch.cat(batch.reward).to(self.device).view(self.batch_size, 1)
         dones = torch.cat(batch.done).to(self.device).view(self.batch_size, 1)
         next_states = torch.cat(batch.next_state).to(self.device).view(self.batch_size, *self.n_states)
+        goals = torch.cat(batch.goal).to(self.device).view(self.batch_size, self.n_goals)
 
-        return states, actions, rewards, dones, next_states
+        return states, actions, rewards, dones, next_states, goals
 
     def train(self):
         if len(self.memory) < self.batch_size:
             return 0, 0
         batch = self.memory.sample(self.batch_size)
-        states, actions, rewards, dones, next_states = self.unpack_batch(batch)
+        states, actions, rewards, dones, next_states, goals = self.unpack_batch(batch)
         with torch.no_grad():
-            target_q = self.critic_target(next_states, self.actor_target(next_states))
+            target_q = self.critic_target(next_states, goals, self.actor_target(next_states, goals))
             target_returns = rewards + self.gamma * target_q * (1.0 - dones)
 
-        q_eval = self.critic(states, actions)
+        q_eval = self.critic(states, goals, actions)
         critic_loss = self.critic_loss_fn(target_returns.view(self.batch_size, 1), q_eval)
 
         self.critic_optim.zero_grad()
         critic_loss.backward()
         self.critic_optim.step()
 
-        actor_loss = -self.critic(states, self.actor(states))
+        actor_loss = -self.critic(states, goals, self.actor(states, goals))
         actor_loss = actor_loss.mean()
 
         self.actor_optim.zero_grad()
