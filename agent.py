@@ -93,7 +93,7 @@ class Agent:
         target_model.eval()
 
     @staticmethod
-    def soft_update_networks(local_model, target_model, tau=0.01):
+    def soft_update_networks(local_model, target_model, tau=0.05):
         for t_params, e_params in zip(target_model.parameters(), local_model.parameters()):
             t_params.data.copy_(tau * e_params.data + (1 - tau) * t_params.data)
 
@@ -124,6 +124,7 @@ class Agent:
         with torch.no_grad():
             target_q = self.critic_target(next_states, goals, self.actor_target(next_states, goals))
             target_returns = rewards + self.gamma * target_q * (1.0 - dones)
+            target_returns = torch.clamp(target_returns, -1 / (1 - self.gamma), 0)
 
         q_eval = self.critic(states, goals, actions)
         critic_loss = self.critic_loss_fn(target_returns.view(self.batch_size, 1), q_eval)

@@ -38,8 +38,9 @@ class Memory:
         goals = []
         for ep_idx, timestep, f_offset in zip(her_indices, her_timesteps, future_offsets):
             self.memory[ep_idx][-3][timestep] = self.memory[ep_idx][-4][timestep + f_offset]
-            if np.linalg.norm(self.memory[ep_idx][-3][timestep] - self.memory[ep_idx][-1][timestep]) == 0:
+            if np.linalg.norm(self.memory[ep_idx][-3][timestep] - self.memory[ep_idx][-1][timestep]) <= 0.05:
                 self.memory[ep_idx][2][timestep] = 0
+                # print("HER affected")
             else:
                 self.memory[ep_idx][2][timestep] = -1
             states.append(self.memory[ep_idx][0][timestep])

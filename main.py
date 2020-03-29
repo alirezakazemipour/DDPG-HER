@@ -90,7 +90,7 @@ else:
                     ep_next_s.append(next_env_dict["observation"])
 
                     state = next_env_dict["observation"]
-                    desired_goal = next_env_dict["desired_goal"]
+                    # desired_goal = next_env_dict["desired_goal"]
                     episode_reward += reward
 
                 agent.store((ep_s, ep_a, ep_r, ep_d, ep_ag, ep_dg, ep_next_s, ep_next_ag))
@@ -100,11 +100,10 @@ else:
                     global_running_r.append(episode_reward)
                 else:
                     global_running_r.append(global_running_r[-1] * 0.99 + 0.01 * episode_reward)
-
             for n_update in range(num_updates):
                 agent.train()
 
-        print(f"EP:{episode}| "
+        print(f"Epoch:{epoch}| "
               f"EP_running_r:{global_running_r[-1]:.3f}| "
               f"EP_reward:{episode_reward:.3f}| ")
 
