@@ -100,9 +100,10 @@ else:
         total_ac_loss.append(ep_actor_loss)
         total_cr_loss.append(ep_critic_loss)
 
-        print(f"EP:{episode_num}| "
-              f"EP_running_r:{global_running_r[-1]:.3f}| "
-              f"EP_reward:{episode_reward:.3f}| ")
+        if episode_num % 100 == 0:
+            print(f"EP:{episode_num}| "
+                  f"EP_running_r:{global_running_r[-1]:.3f}| "
+                  f"EP_reward:{episode_reward:.3f}| ")
 
     agent.save_weights()
     player = Play(env, agent)

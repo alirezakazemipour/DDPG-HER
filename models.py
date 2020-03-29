@@ -16,13 +16,13 @@ class Actor(nn.Module):
         self.n_goals = n_goals
         self.n_hidden1 = n_hidden1
         self.n_hidden2 = n_hidden2
-        self.hidden3 = n_hidden3
+        self.n_hidden3 = n_hidden3
         self.initial_w = initial_w
         super(Actor, self).__init__()
 
         self.fc1 = nn.Linear(in_features=self.n_states + self.n_goals, out_features=self.n_hidden1)
         self.fc2 = nn.Linear(in_features=self.n_hidden1, out_features=self.n_hidden2)
-        self.fc3 = nn.Linear(in_features=self.n_hidden2, out_features=self.hidden3)
+        self.fc3 = nn.Linear(in_features=self.n_hidden2, out_features=self.n_hidden3)
         self.output = nn.Linear(in_features=self.n_hidden3, out_features=self.n_actions)
         self.tanh = nn.Tanh()
 
