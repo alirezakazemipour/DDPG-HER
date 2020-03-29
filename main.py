@@ -6,17 +6,18 @@ from play import Play
 import mujoco_py
 import random
 
-
 ENV_NAME = "FetchPickAndPlace-v1"
 INTRO = False
-MAX_EPISODES = 1000
-MAX_STEPS_PER_EPISODE = 500
-memory_size = 100000
-batch_size = 64
-actor_lr = 1e-4
+MAX_EPOCHS = 200
+MAX_CYCLES = 50
+num_updates = 40
+MAX_EPISODES = 16
+memory_size = 1e+6
+batch_size = 128
+actor_lr = 1e-3
 critic_lr = 1e-3
-gamma = 0.99
-tau = 0.001
+gamma = 0.98
+tau = 0.05
 k_future = 4
 
 test_env = gym.make(ENV_NAME)
@@ -53,73 +54,56 @@ else:
                   critic_lr=critic_lr,
                   gamma=gamma,
                   tau=tau)
-    # total_reward = 0
-    global_running_r = []
-    total_ac_loss = []
-    total_cr_loss =[]
-    for episode_num in range(MAX_EPISODES):
-        agent.reset_randomness()
-        env_dict = env.reset()
-        state = env_dict["observation"]
-        goal = env_dict["desired_goal"]
-        episode_reward = 0
-        ep_actor_loss = 0
-        ep_critic_loss = 0
-        done = False
-        episode = []
-        for step in range(MAX_STEPS_PER_EPISODE):
-            action = agent.choose_action(state, goal)
-            next_state, reward, done, _ = env.step(action)
-            agent.store(state, reward, done, action, next_state["observation"], next_state["desired_goal"])
-            episode.append((state, reward, done, action, next_state["observation"], next_state["achieved_goal"]))
-            actor_loss, critic_loss = agent.train()
-            ep_actor_loss += actor_loss
-            ep_critic_loss += critic_loss
-            episode_reward += reward
-            if done:
-                break
-            state = next_state["observation"]
-            goal = next_state["desired_goal"]
 
-        for i, transition in enumerate(episode):
-            state, action, reward, done, next_state, next_achieved_goal = transition
-            future_transitions = random.choices(episode[i:], k=k_future)
-            for future_transition in future_transitions:
-                new_desired_goal = future_transition[-1]
-                if (next_achieved_goal == new_desired_goal).all():
-                    reward = 0
-                else:
-                    reward = -1
+    for epoch in range(MAX_EPOCHS):
+        for cycle in range(MAX_CYCLES):
+            # mini_batches = []
+            for episode in range(MAX_EPISODES):
 
-                agent.store(state, action, reward, done, next_state, new_desired_goal)
+                done = 0
+                step = 0
+                env_dict = env.reset()
+                state = env_dict["observation"]
+                achieved_goal = env_dict["achieved_goal"]
+                desired_goal = env_dict["desired_goal"]
+                ep_s = []
+                ep_a = []
+                ep_r = []
+                ep_d = []
+                ep_ag = []
+                ep_dg = []
+                ep_next_s = []
+                while not done:
+                    action = agent.choose_action(state, desired_goal)
+                    next_env_dict, reward, done, _ = env.step(action)
+                    ep_s.append(state)
+                    ep_a.append(action)
+                    ep_r.append(reward)
+                    ep_d.append(done)
+                    ep_ag.append(next_env_dict["achieved_goal"])
+                    ep_dg.append(desired_goal)
+                    ep_next_s.append(next_env_dict["observation"])
+                    agent.store((ep_s, ep_a, ep_r, ep_d, ep_ag, ep_dg, ep_next_s))
+                # mini_batches.append((ep_s, ep_a, ep_r, ep_d, ep_ag, ep_dg, ep_next_s))
+            # agent.store(mini_batches)
+            for n_update in range(num_updates):
+                agent.train()
 
-        if episode_num == 0:
-            global_running_r.append(episode_reward)
-        else:
-            global_running_r.append(global_running_r[-1] * 0.99 + 0.01 * episode_reward)
-        total_ac_loss.append(ep_actor_loss)
-        total_cr_loss.append(ep_critic_loss)
-
-        if episode_num % 100 == 0:
-            print(f"EP:{episode_num}| "
-                  f"EP_running_r:{global_running_r[-1]:.3f}| "
-                  f"EP_reward:{episode_reward:.3f}| ")
-
-    agent.save_weights()
-    player = Play(env, agent)
-    player.evaluate()
-
-    plt.figure()
-    plt.subplot(311)
-    plt.plot(np.arange(0, MAX_EPISODES), global_running_r)
-    plt.title("Reward")
-
-    plt.subplot(312)
-    plt.plot(np.arange(0, MAX_EPISODES), total_ac_loss)
-    plt.title("Actor loss")
-
-    plt.subplot(313)
-    plt.plot(np.arange(0, MAX_EPISODES), total_cr_loss)
-    plt.title("Critic loss")
-
-    plt.show()
+    # agent.save_weights()
+    # player = Play(env, agent)
+    # player.evaluate()
+    #
+    # plt.figure()
+    # plt.subplot(311)
+    # plt.plot(np.arange(0, MAX_EPISODES), global_running_r)
+    # plt.title("Reward")
+    #
+    # plt.subplot(312)
+    # plt.plot(np.arange(0, MAX_EPISODES), total_ac_loss)
+    # plt.title("Actor loss")
+    #
+    # plt.subplot(313)
+    # plt.plot(np.arange(0, MAX_EPISODES), total_cr_loss)
+    # plt.title("Critic loss")
+    #
+    # plt.show()

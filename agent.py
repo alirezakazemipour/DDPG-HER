@@ -69,15 +69,16 @@ class Agent:
     def reset_randomness(self):
         self.random_process.reset_states()
 
-    def store(self, state, reward, done, action, next_state, goal):
-        state = from_numpy(state).float().to("cpu")
-        reward = torch.FloatTensor([reward])
-        done = torch.Tensor([done])
-        next_state = from_numpy(next_state).float().to("cpu")
-        goal = from_numpy(goal).float().to("cpu")
-        action = from_numpy(action)
+    def store(self, episode_batch):
+        states = [from_numpy(state).float().to("cpu") for state in episode_batch[0]]
+        actions = [from_numpy(action).float().to("cpu") for action in episode_batch[1]]
+        rewards = [torch.FloatTensor([reward]) for reward in episode_batch[2]]
+        dones = [torch.Tensor([done]) for done in episode_batch[3]]
+        a_goals = [from_numpy(a_goal).float().to("cpu") for a_goal in episode_batch[4]]
+        d_goals = [from_numpy(d_goal).float().to("cpu") for d_goal in episode_batch[5]]
+        next_states = [from_numpy(next_state).float().to("cpu") for next_state in episode_batch[6]]
 
-        self.memory.add(state, reward, done, action, next_state, goal)
+        self.memory.add((states, rewards, dones, actions, next_states, a_goals, d_goals))
 
     def init_target_networks(self):
         self.hard_update_networks(self.actor, self.actor_target)
