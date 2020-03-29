@@ -53,8 +53,10 @@ else:
                   actor_lr=actor_lr,
                   critic_lr=critic_lr,
                   gamma=gamma,
-                  tau=tau)
+                  tau=tau,
+                  k_future=k_future)
 
+    global_running_r = []
     for epoch in range(MAX_EPOCHS):
         for cycle in range(MAX_CYCLES):
             # mini_batches = []
@@ -72,7 +74,9 @@ else:
                 ep_d = []
                 ep_ag = []
                 ep_dg = []
+                ep_next_ag = []
                 ep_next_s = []
+                episode_reward = 0
                 while not done:
                     action = agent.choose_action(state, desired_goal)
                     next_env_dict, reward, done, _ = env.step(action)
@@ -80,14 +84,29 @@ else:
                     ep_a.append(action)
                     ep_r.append(reward)
                     ep_d.append(done)
-                    ep_ag.append(next_env_dict["achieved_goal"])
+                    ep_ag.append(achieved_goal)
                     ep_dg.append(desired_goal)
+                    ep_next_ag.append(next_env_dict["achieved_goal"])
                     ep_next_s.append(next_env_dict["observation"])
-                    agent.store((ep_s, ep_a, ep_r, ep_d, ep_ag, ep_dg, ep_next_s))
+
+                    state = next_env_dict["observation"]
+                    desired_goal = next_env_dict["desired_goal"]
+                    episode_reward += reward
+
+                agent.store((ep_s, ep_a, ep_r, ep_d, ep_ag, ep_dg, ep_next_s, ep_next_ag))
                 # mini_batches.append((ep_s, ep_a, ep_r, ep_d, ep_ag, ep_dg, ep_next_s))
             # agent.store(mini_batches)
+                if episode == 0:
+                    global_running_r.append(episode_reward)
+                else:
+                    global_running_r.append(global_running_r[-1] * 0.99 + 0.01 * episode_reward)
+
             for n_update in range(num_updates):
                 agent.train()
+
+        print(f"EP:{episode}| "
+              f"EP_running_r:{global_running_r[-1]:.3f}| "
+              f"EP_reward:{episode_reward:.3f}| ")
 
     # agent.save_weights()
     # player = Play(env, agent)

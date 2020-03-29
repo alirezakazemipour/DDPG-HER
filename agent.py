@@ -3,12 +3,13 @@ from torch import from_numpy, device
 import numpy as np
 from models import Actor, Critic
 from random_process import OrnsteinUhlenbeckProcess
-from memory import Meomory, Transition
+from memory import Memory, Transition
 from torch.optim import Adam
 
 
 class Agent:
     def __init__(self, n_states, n_actions, n_goals, action_bounds, capacity,
+                 k_future,
                  batch_size,
                  action_size=1,
                  tau=0.001,
@@ -19,6 +20,7 @@ class Agent:
         self.n_states = n_states
         self.n_actions = n_actions
         self.n_goals = n_goals
+        self.k_future = k_future
         self.action_bounds = action_bounds
         self.action_size = action_size
 
@@ -37,7 +39,7 @@ class Agent:
         self.epsilon_decay = 0.5
         self.random_process = OrnsteinUhlenbeckProcess()
         self.capacity = capacity
-        self.memory = Meomory(self.capacity)
+        self.memory = Memory(self.capacity, self.k_future)
 
         self.batch_size = batch_size
         self.actor_lr = actor_lr
@@ -76,9 +78,10 @@ class Agent:
         dones = [torch.Tensor([done]) for done in episode_batch[3]]
         a_goals = [from_numpy(a_goal).float().to("cpu") for a_goal in episode_batch[4]]
         d_goals = [from_numpy(d_goal).float().to("cpu") for d_goal in episode_batch[5]]
-        next_states = [from_numpy(next_state).float().to("cpu") for next_state in episode_batch[6]]
+        next_states = [from_numpy(state).float().to("cpu") for state in episode_batch[6]]
+        next_a_goals = [from_numpy(next_a_goal).float().to("cpu") for next_a_goal in episode_batch[7]]
 
-        self.memory.add((states, rewards, dones, actions, next_states, a_goals, d_goals))
+        self.memory.add(states, actions, rewards, dones, a_goals, d_goals, next_states, next_a_goals)
 
     def init_target_networks(self):
         self.hard_update_networks(self.actor, self.actor_target)
@@ -110,8 +113,14 @@ class Agent:
     def train(self):
         if len(self.memory) < self.batch_size:
             return 0, 0
-        batch = self.memory.sample(self.batch_size)
-        states, actions, rewards, dones, next_states, goals = self.unpack_batch(batch)
+        states, actions, rewards, dones, next_states, goals = self.memory.sample(self.batch_size)
+        # states, actions, rewards, dones, next_states, goals = self.unpack_batch(batch)
+        states = torch.Tensor(states).to(self.device)
+        rewards = torch.Tensor(rewards).to(self.device)
+        dones = torch.Tensor(dones).to(self.device)
+        next_states = torch.Tensor(next_states).to(self.device)
+        actions = torch.Tensor(actions).to(self.device)
+        goals = torch.Tensor(goals).to(self.device)
         with torch.no_grad():
             target_q = self.critic_target(next_states, goals, self.actor_target(next_states, goals))
             target_returns = rewards + self.gamma * target_q * (1.0 - dones)
