@@ -5,6 +5,9 @@ import numpy as np
 from play import Play
 import mujoco_py
 import random
+import psutil
+import time
+from copy import deepcopy as dc
 
 ENV_NAME = "FetchPickAndPlace-v1"
 INTRO = False
@@ -25,6 +28,7 @@ state_shape = test_env.observation_space.spaces["observation"].shape
 n_actions = test_env.action_space.shape[0]
 n_goals = test_env.observation_space.spaces["desired_goal"].shape[0]
 action_bounds = [test_env.action_space.low[0], test_env.action_space.high[0]]
+to_gb = lambda in_bytes: in_bytes / 1024 / 1024 / 1024
 
 if INTRO:
     print(f"state_shape:{state_shape}\n"
@@ -58,6 +62,7 @@ else:
 
     global_running_r = []
     for epoch in range(MAX_EPOCHS):
+        start_time = time.time()
         for cycle in range(MAX_CYCLES):
             # mini_batches = []
             for episode in range(MAX_EPISODES):
@@ -84,16 +89,16 @@ else:
                     ep_a.append(action)
                     ep_r.append(reward)
                     ep_d.append(done)
-                    ep_ag.append(achieved_goal)
+                    ep_ag.append(next_env_dict["achieved_goal"])
                     ep_dg.append(desired_goal)
-                    ep_next_ag.append(next_env_dict["achieved_goal"])
-                    ep_next_s.append(next_env_dict["observation"])
+                    # ep_next_ag.append(next_env_dict["achieved_goal"])
+                    ep_next_s.append(dc(next_env_dict["observation"]))
 
-                    state = next_env_dict["observation"]
+                    state = dc(next_env_dict["observation"])
                     # desired_goal = next_env_dict["desired_goal"]
                     episode_reward += reward
 
-                agent.store((ep_s, ep_a, ep_r, ep_d, ep_ag, ep_dg, ep_next_s, ep_next_ag))
+                agent.store((ep_s, ep_a, ep_r, ep_d, ep_ag, ep_dg, ep_next_s))#, ep_next_ag))
                 # mini_batches.append((ep_s, ep_a, ep_r, ep_d, ep_ag, ep_dg, ep_next_s))
             # agent.store(mini_batches)
                 if episode == 0:
@@ -102,10 +107,15 @@ else:
                     global_running_r.append(global_running_r[-1] * 0.99 + 0.01 * episode_reward)
             for n_update in range(num_updates):
                 agent.train()
+            agent.update_networks()
 
+        ram = psutil.virtual_memory()
         print(f"Epoch:{epoch}| "
               f"EP_running_r:{global_running_r[-1]:.3f}| "
-              f"EP_reward:{episode_reward:.3f}| ")
+              f"EP_reward:{episode_reward:.3f}| "
+              f"Memory_length:{len(agent.memory)}| "
+              f"Duration:{time.time() - start_time:3.3f}| "
+              f"{to_gb(ram.used):.1f}/{to_gb(ram.total):.1f} GB RAM")
 
     # agent.save_weights()
     # player = Play(env, agent)

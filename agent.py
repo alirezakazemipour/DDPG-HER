@@ -17,6 +17,7 @@ class Agent:
                  critic_lr=1e-3,
                  gamma=0.99):
         self.device = device("cuda" if torch.cuda.is_available() else "cpu")
+        # self.device = device("cpu")
         self.n_states = n_states
         self.n_actions = n_actions
         self.n_goals = n_goals
@@ -79,9 +80,9 @@ class Agent:
         a_goals = [from_numpy(a_goal).float().to("cpu") for a_goal in episode_batch[4]]
         d_goals = [from_numpy(d_goal).float().to("cpu") for d_goal in episode_batch[5]]
         next_states = [from_numpy(state).float().to("cpu") for state in episode_batch[6]]
-        next_a_goals = [from_numpy(next_a_goal).float().to("cpu") for next_a_goal in episode_batch[7]]
+        # next_a_goals = [from_numpy(next_a_goal).float().to("cpu") for next_a_goal in episode_batch[7]]
 
-        self.memory.add(states, actions, rewards, dones, a_goals, d_goals, next_states, next_a_goals)
+        self.memory.add(states, actions, rewards, dones, a_goals, d_goals, next_states)#, next_a_goals)
 
     def init_target_networks(self):
         self.hard_update_networks(self.actor, self.actor_target)
@@ -121,6 +122,7 @@ class Agent:
         next_states = torch.Tensor(next_states).to(self.device)
         actions = torch.Tensor(actions).to(self.device)
         goals = torch.Tensor(goals).to(self.device)
+
         with torch.no_grad():
             target_q = self.critic_target(next_states, goals, self.actor_target(next_states, goals))
             target_returns = rewards + self.gamma * target_q * (1.0 - dones)
@@ -140,9 +142,6 @@ class Agent:
         actor_loss.backward()
         self.actor_optim.step()
 
-        self.soft_update_networks(self.actor, self.actor_target)
-        self.soft_update_networks(self.critic, self.critic_target)
-
         return actor_loss, critic_loss
 
     def save_weights(self):
@@ -156,4 +155,8 @@ class Agent:
     def set_to_eval_mode(self):
         self.actor.eval()
         self.critic.eval()
+
+    def update_networks(self):
+        self.soft_update_networks(self.actor, self.actor_target)
+        self.soft_update_networks(self.critic, self.critic_target)
 

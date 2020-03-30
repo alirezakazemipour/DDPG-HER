@@ -56,8 +56,8 @@ class Critic(nn.Module):
         self.action_size = action_size
         super(Critic, self).__init__()
 
-        self.fc1 = nn.Linear(in_features=self.n_states + self.n_goals, out_features=self.n_hidden1)
-        self.fc2 = nn.Linear(in_features=self.n_hidden1 + self.action_size, out_features=self.n_hidden2)
+        self.fc1 = nn.Linear(in_features=self.n_states + self.n_goals + self.action_size, out_features=self.n_hidden1)
+        self.fc2 = nn.Linear(in_features=self.n_hidden1, out_features=self.n_hidden2)
         self.fc3 = nn.Linear(in_features=self.n_hidden2, out_features=self.n_hidden3)
         self.output = nn.Linear(in_features=self.n_hidden3, out_features=1)
 
@@ -72,8 +72,8 @@ class Critic(nn.Module):
         self.output.bias.data.uniform_(-self.initial_w, self.initial_w)
 
     def forward(self, x, g, a):
-        x = F.relu(self.fc1(torch.cat([x, g], dim=-1)))
-        x = F.relu(self.fc2(torch.cat([x, a], dim=1)))
+        x = F.relu(self.fc1(torch.cat([x, g, a], dim=-1)))
+        x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
         output = self.output(x)
 
