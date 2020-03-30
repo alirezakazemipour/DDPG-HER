@@ -72,17 +72,27 @@ class Agent:
     def reset_randomness(self):
         self.random_process.reset_states()
 
-    def store(self, episode_batch):
-        states = [from_numpy(state).float().to("cpu") for state in episode_batch[0]]
-        actions = [from_numpy(action).float().to("cpu") for action in episode_batch[1]]
-        rewards = [torch.FloatTensor([reward]) for reward in episode_batch[2]]
-        dones = [torch.Tensor([done]) for done in episode_batch[3]]
-        a_goals = [from_numpy(a_goal).float().to("cpu") for a_goal in episode_batch[4]]
-        d_goals = [from_numpy(d_goal).float().to("cpu") for d_goal in episode_batch[5]]
-        next_states = [from_numpy(state).float().to("cpu") for state in episode_batch[6]]
-        next_a_goals = [from_numpy(next_a_goal).float().to("cpu") for next_a_goal in episode_batch[7]]
+    def store(self, episode_dict):
+        states = [from_numpy(state).float().to("cpu") for state in episode_dict["state"]]
+        episode_dict["state"] = states
+        actions = [from_numpy(action).float().to("cpu") for action in episode_dict["action"]]
+        episode_dict["action"] = actions
+        rewards = [torch.FloatTensor([reward]) for reward in episode_dict["reward"]]
+        episode_dict["reward"] = rewards
+        dones = [torch.Tensor([done]) for done in episode_dict["done"]]
+        episode_dict["done"] = dones
+        achieved_goals = [from_numpy(a_goal).float().to("cpu") for a_goal in episode_dict["achieved_goal"]]
+        episode_dict["achieved_goal"] = achieved_goals
+        desired_goals = [from_numpy(d_goal).float().to("cpu") for d_goal in episode_dict["desired_goal"]]
+        episode_dict["desired_goal"] = desired_goals
+        next_states = [from_numpy(state).float().to("cpu") for state in episode_dict["next_state"]]
+        episode_dict["next_state"] = next_states
+        next_achieved_goals = [from_numpy(next_a_goal).float().to("cpu") for next_a_goal in episode_dict["next_achieved_goal"]]
+        episode_dict["next_achieved_goal"] = next_achieved_goals
+        next_desired_goals = [from_numpy(next_a_goal).float().to("cpu") for next_a_goal in episode_dict["next_desired_goal"]]
+        episode_dict["next_desired_goal"] = next_desired_goals
 
-        self.memory.add(states, actions, rewards, dones, a_goals, d_goals, next_states, next_a_goals)
+        self.memory.add(**episode_dict)
 
     def init_target_networks(self):
         self.hard_update_networks(self.actor, self.actor_target)

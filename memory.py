@@ -21,14 +21,14 @@ class Memory:
         indices = np.random.randint(0, len(self.memory), batch_size)
         p = np.random.uniform(size=batch_size)
         her_indices = indices[p <= self.future_p]
-        total_episode_steps = [len(self.memory[idx][0]) for idx in her_indices]
+        total_episode_steps = [len(self.memory[idx]["state"]) for idx in her_indices]
         her_timesteps = [np.random.randint(0, timestep) for timestep in total_episode_steps]
         future_offsets = np.random.uniform(size=len(her_indices)) *\
                          (np.array(total_episode_steps) - np.array(her_timesteps))
         future_offsets = future_offsets.astype(np.int)
 
         regular_indices = indices[p > self.future_p]
-        total_episode_steps = [len(self.memory[idx][0]) for idx in regular_indices]
+        total_episode_steps = [len(self.memory[idx]["state"]) for idx in regular_indices]
         regular_timesteps = [np.random.randint(0, timestep) for timestep in total_episode_steps]
 
         states = []
@@ -37,32 +37,34 @@ class Memory:
         dones = []
         next_states = []
         goals = []
-        next_goals = []
         for ep_idx, timestep, f_offset in zip(her_indices, her_timesteps, future_offsets):
-            self.memory[ep_idx][-3][timestep] = dc(self.memory[ep_idx][-4][timestep + f_offset])
-            if np.linalg.norm(self.memory[ep_idx][-3][timestep] - self.memory[ep_idx][-1][timestep]) <= 0.05:
-                self.memory[ep_idx][2][timestep] = 0
+            self.memory[ep_idx]["desired_goal"][timestep] = dc(self.memory[ep_idx]["achieved_goal"][timestep + f_offset])
+            if np.linalg.norm(self.memory[ep_idx]["desired_goal"][timestep] - self.memory[ep_idx]["next_achieved_goal"][timestep]) <= 0.05:
+                self.memory[ep_idx]["reward"][timestep] = 0
+                # self.memory[ep_idx][3][timestep] = 1
             else:
-                self.memory[ep_idx][2][timestep] = -1
-            states.append(self.memory[ep_idx][0][timestep])
-            actions.append(self.memory[ep_idx][1][timestep])
-            rewards.append(self.memory[ep_idx][2][timestep])
-            dones.append(self.memory[ep_idx][3][timestep])
-            next_states.append(self.memory[ep_idx][-2][timestep])
-            goals.append(self.memory[ep_idx][-3][timestep])
+                self.memory[ep_idx]["reward"][timestep] = -1
+                # self.memory[ep_idx][3][timestep] = 0
+
+            states.append(self.memory[ep_idx]["state"][timestep])
+            actions.append(self.memory[ep_idx]["action"][timestep])
+            rewards.append(self.memory[ep_idx]["reward"][timestep])
+            dones.append(self.memory[ep_idx]["done"][timestep])
+            next_states.append(self.memory[ep_idx]["next_state"][timestep])
+            goals.append(self.memory[ep_idx]["desired_goal"][timestep])
 
         for ep_idx, timestep in zip(regular_indices, regular_timesteps):
-            states.append(self.memory[ep_idx][0][timestep])
-            actions.append(self.memory[ep_idx][1][timestep])
-            rewards.append(self.memory[ep_idx][2][timestep])
-            dones.append(self.memory[ep_idx][3][timestep])
-            next_states.append(self.memory[ep_idx][-2][timestep])
-            goals.append(self.memory[ep_idx][-3][timestep])
+            states.append(self.memory[ep_idx]["state"][timestep])
+            actions.append(self.memory[ep_idx]["action"][timestep])
+            rewards.append(self.memory[ep_idx]["reward"][timestep])
+            dones.append(self.memory[ep_idx]["done"][timestep])
+            next_states.append(self.memory[ep_idx]["next_state"][timestep])
+            goals.append(self.memory[ep_idx]["desired_goal"][timestep])
 
         return np.vstack(states), np.vstack(actions), np.vstack(rewards), np.vstack(dones), \
                np.vstack(next_states), np.vstack(goals)
 
-    def add(self, *transition):
+    def add(self, **transition):
         self.memory.append(transition)
         if len(self.memory) > self.capacity:
             self.memory.pop(0)
@@ -73,4 +75,4 @@ class Memory:
         return self.memory_length
 
     def __update_length__(self, transition):
-        self.memory_length += len(transition[0])
+        self.memory_length += len(transition["state"])

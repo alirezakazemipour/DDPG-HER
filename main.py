@@ -64,43 +64,46 @@ else:
     for epoch in range(MAX_EPOCHS):
         start_time = time.time()
         for cycle in range(MAX_CYCLES):
-            # mini_batches = []
             for episode in range(MAX_EPISODES):
-
+                episode_dict = {
+                    "state": [],
+                    "action": [],
+                    "reward": [],
+                    "done": [],
+                    "achieved_goal": [],
+                    "desired_goal": [],
+                    "next_state": [],
+                    "next_achieved_goal": [],
+                    "next_desired_goal": []}
                 done = 0
-                step = 0
                 env_dict = env.reset()
                 state = env_dict["observation"]
                 achieved_goal = env_dict["achieved_goal"]
                 desired_goal = env_dict["desired_goal"]
-                ep_s = []
-                ep_a = []
-                ep_r = []
-                ep_d = []
-                ep_ag = []
-                ep_dg = []
-                ep_next_ag = []
-                ep_next_s = []
                 episode_reward = 0
                 while not done:
                     action = agent.choose_action(state, desired_goal)
                     next_env_dict, reward, done, _ = env.step(action)
-                    ep_s.append(state)
-                    ep_a.append(action)
-                    ep_r.append(reward)
-                    ep_d.append(done)
-                    ep_ag.append(achieved_goal)
-                    ep_dg.append(desired_goal)
-                    ep_next_ag.append(next_env_dict["achieved_goal"])
-                    ep_next_s.append(dc(next_env_dict["observation"]))
 
-                    state = dc(next_env_dict["observation"])
-                    achieved_goal = env_dict["achieved_goal"]
+                    next_state = next_env_dict["observation"]
+                    next_achieved_goal = next_env_dict["achieved_goal"]
+                    next_desired_goal = next_env_dict["desired_goal"]
+
+                    episode_dict["state"].append(state)
+                    episode_dict["action"].append(action)
+                    episode_dict["reward"].append(reward)
+                    episode_dict["done"].append(done)
+                    episode_dict["achieved_goal"].append(achieved_goal)
+                    episode_dict["desired_goal"].append(desired_goal)
+                    episode_dict["next_state"].append(next_state)
+                    episode_dict["next_achieved_goal"].append(next_achieved_goal)
+                    episode_dict["next_desired_goal"].append(next_desired_goal)
+
+                    state = next_state
+                    desired_goal = next_desired_goal
                     episode_reward += reward
+                agent.store(dc(episode_dict))
 
-                agent.store((ep_s, ep_a, ep_r, ep_d, ep_ag, ep_dg, ep_next_s, ep_next_ag))
-                # mini_batches.append((ep_s, ep_a, ep_r, ep_d, ep_ag, ep_dg, ep_next_s))
-            # agent.store(mini_batches)
                 if episode == 0:
                     global_running_r.append(episode_reward)
                 else:
