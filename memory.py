@@ -39,8 +39,8 @@ class Memory:
         goals = []
         next_goals = []
         for ep_idx, timestep, f_offset in zip(her_indices, her_timesteps, future_offsets):
-            self.memory[ep_idx][-2][timestep] = dc(self.memory[ep_idx][-3][timestep + f_offset])
-            if np.linalg.norm(self.memory[ep_idx][-2][timestep] - self.memory[ep_idx][-3][timestep]) <= 0.05:
+            self.memory[ep_idx][-3][timestep] = dc(self.memory[ep_idx][-4][timestep + f_offset])
+            if np.linalg.norm(self.memory[ep_idx][-3][timestep] - self.memory[ep_idx][-1][timestep]) <= 0.05:
                 self.memory[ep_idx][2][timestep] = 0
             else:
                 self.memory[ep_idx][2][timestep] = -1
@@ -48,16 +48,16 @@ class Memory:
             actions.append(self.memory[ep_idx][1][timestep])
             rewards.append(self.memory[ep_idx][2][timestep])
             dones.append(self.memory[ep_idx][3][timestep])
-            next_states.append(self.memory[ep_idx][-1][timestep])
-            goals.append(self.memory[ep_idx][-2][timestep])
+            next_states.append(self.memory[ep_idx][-2][timestep])
+            goals.append(self.memory[ep_idx][-3][timestep])
 
         for ep_idx, timestep in zip(regular_indices, regular_timesteps):
             states.append(self.memory[ep_idx][0][timestep])
             actions.append(self.memory[ep_idx][1][timestep])
             rewards.append(self.memory[ep_idx][2][timestep])
             dones.append(self.memory[ep_idx][3][timestep])
-            next_states.append(self.memory[ep_idx][-1][timestep])
-            goals.append(self.memory[ep_idx][-2][timestep])
+            next_states.append(self.memory[ep_idx][-2][timestep])
+            goals.append(self.memory[ep_idx][-3][timestep])
 
         return np.vstack(states), np.vstack(actions), np.vstack(rewards), np.vstack(dones), \
                np.vstack(next_states), np.vstack(goals)

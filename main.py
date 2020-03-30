@@ -15,7 +15,7 @@ MAX_EPOCHS = 200
 MAX_CYCLES = 50
 num_updates = 40
 MAX_EPISODES = 16
-memory_size = 1e+6
+memory_size = 7e+5
 batch_size = 128
 actor_lr = 1e-3
 critic_lr = 1e-3
@@ -89,16 +89,16 @@ else:
                     ep_a.append(action)
                     ep_r.append(reward)
                     ep_d.append(done)
-                    ep_ag.append(next_env_dict["achieved_goal"])
+                    ep_ag.append(achieved_goal)
                     ep_dg.append(desired_goal)
-                    # ep_next_ag.append(next_env_dict["achieved_goal"])
+                    ep_next_ag.append(next_env_dict["achieved_goal"])
                     ep_next_s.append(dc(next_env_dict["observation"]))
 
                     state = dc(next_env_dict["observation"])
-                    # desired_goal = next_env_dict["desired_goal"]
+                    achieved_goal = env_dict["achieved_goal"]
                     episode_reward += reward
 
-                agent.store((ep_s, ep_a, ep_r, ep_d, ep_ag, ep_dg, ep_next_s))#, ep_next_ag))
+                agent.store((ep_s, ep_a, ep_r, ep_d, ep_ag, ep_dg, ep_next_s, ep_next_ag))
                 # mini_batches.append((ep_s, ep_a, ep_r, ep_d, ep_ag, ep_dg, ep_next_s))
             # agent.store(mini_batches)
                 if episode == 0:

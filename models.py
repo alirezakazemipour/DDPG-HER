@@ -10,7 +10,7 @@ def init_weights_biases(size):
 
 
 class Actor(nn.Module):
-    def __init__(self, n_states, n_actions, n_goals, n_hidden1=64, n_hidden2=64, n_hidden3=64, initial_w=3e-3):
+    def __init__(self, n_states, n_actions, n_goals, n_hidden1=256, n_hidden2=256, n_hidden3=256, initial_w=3e-3):
         self.n_states = n_states[0]
         self.n_actions = n_actions
         self.n_goals = n_goals
@@ -46,7 +46,7 @@ class Actor(nn.Module):
 
 
 class Critic(nn.Module):
-    def __init__(self, n_states, n_goals, n_hidden1=64, n_hidden2=64, n_hidden3=64, initial_w=3e-3, action_size=1):
+    def __init__(self, n_states, n_goals, n_hidden1=256, n_hidden2=256, n_hidden3=256, initial_w=3e-3, action_size=1):
         self.n_states = n_states[0]
         self.n_goals = n_goals
         self.n_hidden1 = n_hidden1

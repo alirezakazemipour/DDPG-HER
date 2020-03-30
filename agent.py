@@ -80,9 +80,9 @@ class Agent:
         a_goals = [from_numpy(a_goal).float().to("cpu") for a_goal in episode_batch[4]]
         d_goals = [from_numpy(d_goal).float().to("cpu") for d_goal in episode_batch[5]]
         next_states = [from_numpy(state).float().to("cpu") for state in episode_batch[6]]
-        # next_a_goals = [from_numpy(next_a_goal).float().to("cpu") for next_a_goal in episode_batch[7]]
+        next_a_goals = [from_numpy(next_a_goal).float().to("cpu") for next_a_goal in episode_batch[7]]
 
-        self.memory.add(states, actions, rewards, dones, a_goals, d_goals, next_states)#, next_a_goals)
+        self.memory.add(states, actions, rewards, dones, a_goals, d_goals, next_states, next_a_goals)
 
     def init_target_networks(self):
         self.hard_update_networks(self.actor, self.actor_target)
@@ -157,6 +157,6 @@ class Agent:
         self.critic.eval()
 
     def update_networks(self):
-        self.soft_update_networks(self.actor, self.actor_target)
-        self.soft_update_networks(self.critic, self.critic_target)
+        self.soft_update_networks(self.actor, self.actor_target, self.tau)
+        self.soft_update_networks(self.critic, self.critic_target, self.tau)
 
