@@ -1,10 +1,5 @@
-import random
 import numpy as np
-from collections import namedtuple
 from copy import deepcopy as dc
-
-Transition = namedtuple("Transition",
-                        ("ep_state", "ep_reward", "ep_done", "ep_action", "ep_next_state", "ep_agoal", "ep_dgoal"))
 
 
 class Memory:
@@ -41,10 +36,10 @@ class Memory:
             self.memory[ep_idx]["desired_goal"][timestep] = dc(self.memory[ep_idx]["achieved_goal"][timestep + f_offset])
             if np.linalg.norm(self.memory[ep_idx]["desired_goal"][timestep] - self.memory[ep_idx]["next_achieved_goal"][timestep]) <= 0.05:
                 self.memory[ep_idx]["reward"][timestep] = 0
-                # self.memory[ep_idx][3][timestep] = 1
+                self.memory[ep_idx]["done"][timestep] = 1
             else:
                 self.memory[ep_idx]["reward"][timestep] = -1
-                # self.memory[ep_idx][3][timestep] = 0
+                self.memory[ep_idx]["done"][timestep] = 0
 
             states.append(self.memory[ep_idx]["state"][timestep])
             actions.append(self.memory[ep_idx]["action"][timestep])

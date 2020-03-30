@@ -77,6 +77,7 @@ else:
                     "next_desired_goal": []}
                 done = 0
                 env_dict = env.reset()
+                agent.reset_randomness()
                 state = env_dict["observation"]
                 achieved_goal = env_dict["achieved_goal"]
                 desired_goal = env_dict["desired_goal"]

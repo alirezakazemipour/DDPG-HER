@@ -3,7 +3,7 @@ from torch import from_numpy, device
 import numpy as np
 from models import Actor, Critic
 from random_process import OrnsteinUhlenbeckProcess
-from memory import Memory, Transition
+from memory import Memory
 from torch.optim import Adam
 
 
@@ -37,7 +37,7 @@ class Agent:
         self.gamma = gamma
 
         self.epsilon = 1
-        self.epsilon_decay = 0.5
+        self.epsilon_decay = 0.05
         self.random_process = OrnsteinUhlenbeckProcess()
         self.capacity = capacity
         self.memory = Memory(self.capacity, self.k_future)
@@ -87,9 +87,11 @@ class Agent:
         episode_dict["desired_goal"] = desired_goals
         next_states = [from_numpy(state).float().to("cpu") for state in episode_dict["next_state"]]
         episode_dict["next_state"] = next_states
-        next_achieved_goals = [from_numpy(next_a_goal).float().to("cpu") for next_a_goal in episode_dict["next_achieved_goal"]]
+        next_achieved_goals = [
+            from_numpy(next_a_goal).float().to("cpu") for next_a_goal in episode_dict["next_achieved_goal"]]
         episode_dict["next_achieved_goal"] = next_achieved_goals
-        next_desired_goals = [from_numpy(next_a_goal).float().to("cpu") for next_a_goal in episode_dict["next_desired_goal"]]
+        next_desired_goals = [
+            from_numpy(next_a_goal).float().to("cpu") for next_a_goal in episode_dict["next_desired_goal"]]
         episode_dict["next_desired_goal"] = next_desired_goals
 
         self.memory.add(**episode_dict)
@@ -108,18 +110,18 @@ class Agent:
         for t_params, e_params in zip(target_model.parameters(), local_model.parameters()):
             t_params.data.copy_(tau * e_params.data + (1 - tau) * t_params.data)
 
-    def unpack_batch(self, batch):
-
-        batch = Transition(*zip(*batch))
-
-        states = torch.cat(batch.state).to(self.device).view(self.batch_size, *self.n_states)
-        actions = torch.cat(batch.action).to(self.device).view((-1, self.n_actions))
-        rewards = torch.cat(batch.reward).to(self.device).view(self.batch_size, 1)
-        dones = torch.cat(batch.done).to(self.device).view(self.batch_size, 1)
-        next_states = torch.cat(batch.next_state).to(self.device).view(self.batch_size, *self.n_states)
-        goals = torch.cat(batch.goal).to(self.device).view(self.batch_size, self.n_goals)
-
-        return states, actions, rewards, dones, next_states, goals
+    # def unpack_batch(self, batch):
+    #
+    #     batch = Transition(*zip(*batch))
+    #
+    #     states = torch.cat(batch.state).to(self.device).view(self.batch_size, *self.n_states)
+    #     actions = torch.cat(batch.action).to(self.device).view((-1, self.n_actions))
+    #     rewards = torch.cat(batch.reward).to(self.device).view(self.batch_size, 1)
+    #     dones = torch.cat(batch.done).to(self.device).view(self.batch_size, 1)
+    #     next_states = torch.cat(batch.next_state).to(self.device).view(self.batch_size, *self.n_states)
+    #     goals = torch.cat(batch.goal).to(self.device).view(self.batch_size, self.n_goals)
+    #
+    #     return states, actions, rewards, dones, next_states, goals
 
     def train(self):
         if len(self.memory) < self.batch_size:
