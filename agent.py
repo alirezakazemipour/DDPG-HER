@@ -5,6 +5,7 @@ from models import Actor, Critic
 from random_process import OrnsteinUhlenbeckProcess
 from memory import Memory
 from torch.optim import Adam
+from copy import deepcopy as dc
 
 
 class Agent:
@@ -16,8 +17,8 @@ class Agent:
                  actor_lr=1e-4,
                  critic_lr=1e-3,
                  gamma=0.99):
-        self.device = device("cuda" if torch.cuda.is_available() else "cpu")
-        # self.device = device("cpu")
+        # self.device = device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = device("cpu")
         self.n_states = n_states
         self.n_actions = n_actions
         self.n_goals = n_goals
@@ -46,7 +47,7 @@ class Agent:
         self.actor_lr = actor_lr
         self.critic_lr = critic_lr
         self.actor_optim = Adam(self.actor.parameters(), self.actor_lr)
-        self.critic_optim = Adam(self.critic.parameters(), self.critic_lr, weight_decay=1e-2)
+        self.critic_optim = Adam(self.critic.parameters(), self.critic_lr)
 
         self.critic_loss_fn = torch.nn.MSELoss()
 
@@ -74,25 +75,25 @@ class Agent:
 
     def store(self, episode_dict):
         states = [from_numpy(state).float().to("cpu") for state in episode_dict["state"]]
-        episode_dict["state"] = states
+        episode_dict["state"] = dc(states)
         actions = [from_numpy(action).float().to("cpu") for action in episode_dict["action"]]
-        episode_dict["action"] = actions
+        episode_dict["action"] = dc(actions)
         rewards = [torch.FloatTensor([reward]) for reward in episode_dict["reward"]]
-        episode_dict["reward"] = rewards
+        episode_dict["reward"] = dc(rewards)
         dones = [torch.Tensor([done]) for done in episode_dict["done"]]
-        episode_dict["done"] = dones
+        episode_dict["done"] = dc(dones)
         achieved_goals = [from_numpy(a_goal).float().to("cpu") for a_goal in episode_dict["achieved_goal"]]
-        episode_dict["achieved_goal"] = achieved_goals
+        episode_dict["achieved_goal"] = dc(achieved_goals)
         desired_goals = [from_numpy(d_goal).float().to("cpu") for d_goal in episode_dict["desired_goal"]]
-        episode_dict["desired_goal"] = desired_goals
+        episode_dict["desired_goal"] = dc(desired_goals)
         next_states = [from_numpy(state).float().to("cpu") for state in episode_dict["next_state"]]
-        episode_dict["next_state"] = next_states
+        episode_dict["next_state"] = dc(next_states)
         next_achieved_goals = [
             from_numpy(next_a_goal).float().to("cpu") for next_a_goal in episode_dict["next_achieved_goal"]]
-        episode_dict["next_achieved_goal"] = next_achieved_goals
+        episode_dict["next_achieved_goal"] = dc(next_achieved_goals)
         next_desired_goals = [
             from_numpy(next_a_goal).float().to("cpu") for next_a_goal in episode_dict["next_desired_goal"]]
-        episode_dict["next_desired_goal"] = next_desired_goals
+        episode_dict["next_desired_goal"] = dc(next_desired_goals)
 
         self.memory.add(**episode_dict)
 
@@ -138,21 +139,22 @@ class Agent:
         with torch.no_grad():
             target_q = self.critic_target(next_states, goals, self.actor_target(next_states, goals))
             target_returns = rewards + self.gamma * target_q * (1.0 - dones)
-            target_returns = torch.clamp(target_returns, -1 / (1 - self.gamma), 0)
+            target_returns = torch.clamp(target_returns, -1 / (1 - self.gamma), 0).detach()
 
         q_eval = self.critic(states, goals, actions)
         critic_loss = self.critic_loss_fn(target_returns.view(self.batch_size, 1), q_eval)
 
-        self.critic_optim.zero_grad()
-        critic_loss.backward()
-        self.critic_optim.step()
-
-        actor_loss = -self.critic(states, goals, self.actor(states, goals))
-        actor_loss = actor_loss.mean()
+        a = self.actor(states, goals)
+        actor_loss = -self.critic(states, goals, a)
+        actor_loss = actor_loss.mean() + a.pow(2).mean()
 
         self.actor_optim.zero_grad()
         actor_loss.backward()
         self.actor_optim.step()
+
+        self.critic_optim.zero_grad()
+        critic_loss.backward()
+        self.critic_optim.step()
 
         return actor_loss, critic_loss
 

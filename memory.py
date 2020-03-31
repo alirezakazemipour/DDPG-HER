@@ -33,11 +33,15 @@ class Memory:
         next_states = []
         goals = []
         for ep_idx, timestep, f_offset in zip(her_indices, her_timesteps, future_offsets):
-            self.memory[ep_idx]["desired_goal"][timestep] = dc(self.memory[ep_idx]["achieved_goal"][timestep + f_offset])
-            if np.linalg.norm(self.memory[ep_idx]["desired_goal"][timestep] - self.memory[ep_idx]["next_achieved_goal"][timestep]) <= 0.05:
+            desired_goal = dc(self.memory[ep_idx]["achieved_goal"][timestep + f_offset])
+            if np.linalg.norm(desired_goal - self.memory[ep_idx]["next_achieved_goal"][timestep]) <= 0.05:
+                reward = dc(self.memory[ep_idx]["reward"][timestep])
+                done = dc(self.memory[ep_idx]["done"][timestep])
                 self.memory[ep_idx]["reward"][timestep] = 0
                 self.memory[ep_idx]["done"][timestep] = 1
             else:
+                reward = dc(self.memory[ep_idx]["reward"][timestep])
+                done = dc(self.memory[ep_idx]["done"][timestep])
                 self.memory[ep_idx]["reward"][timestep] = -1
                 self.memory[ep_idx]["done"][timestep] = 0
 
@@ -46,7 +50,10 @@ class Memory:
             rewards.append(self.memory[ep_idx]["reward"][timestep])
             dones.append(self.memory[ep_idx]["done"][timestep])
             next_states.append(self.memory[ep_idx]["next_state"][timestep])
-            goals.append(self.memory[ep_idx]["desired_goal"][timestep])
+            goals.append(desired_goal)
+
+            # self.memory[ep_idx]["reward"][timestep] = reward
+            # self.memory[ep_idx]["done"][timestep] = done
 
         for ep_idx, timestep in zip(regular_indices, regular_timesteps):
             states.append(self.memory[ep_idx]["state"][timestep])
@@ -64,10 +71,13 @@ class Memory:
         if len(self.memory) > self.capacity:
             self.memory.pop(0)
         assert len(self.memory) <= self.capacity
-        self.__update_length__(transition)
+        # self.__update_length__(transition)
 
     def __len__(self):
-        return self.memory_length
+        return len(self.memory)
 
     def __update_length__(self, transition):
         self.memory_length += len(transition["state"])
+
+    def clear_memory(self):
+        self.memory = []

@@ -9,13 +9,13 @@ import psutil
 import time
 from copy import deepcopy as dc
 
-ENV_NAME = "FetchPickAndPlace-v1"
+ENV_NAME = "FetchReach-v1"
 INTRO = False
 MAX_EPOCHS = 200
-MAX_CYCLES = 50
+MAX_CYCLES = 10
 num_updates = 40
 MAX_EPISODES = 16
-memory_size = 7e+5
+memory_size = 7e+5 // 50
 batch_size = 128
 actor_lr = 1e-3
 critic_lr = 1e-3
@@ -81,10 +81,28 @@ else:
                 state = env_dict["observation"]
                 achieved_goal = env_dict["achieved_goal"]
                 desired_goal = env_dict["desired_goal"]
+                while np.linalg.norm(achieved_goal - desired_goal) <= 0.05:
+                    env_dict = env.reset()
+                    agent.reset_randomness()
+                    state = env_dict["observation"]
+                    achieved_goal = env_dict["achieved_goal"]
+                    desired_goal = env_dict["desired_goal"]
                 episode_reward = 0
+                step = 0
                 while not done:
+                    step += 1
                     action = agent.choose_action(state, desired_goal)
-                    next_env_dict, reward, done, _ = env.step(action)
+                    next_env_dict, reward, done, info = env.step(action)
+
+                    # if np.linalg.norm(achieved_goal - desired_goal) <= 0.05:
+                    #     reward = 0
+                    #     done = 1
+                    # else:
+                    #     reward = -1.0
+
+                    if reward == 0:
+                        print(f"did the job on epoch:{epoch}_cycle:{cycle}_episode:{episode}_step:{step}")
+                        done = 1
 
                     next_state = next_env_dict["observation"]
                     next_achieved_goal = next_env_dict["achieved_goal"]
@@ -109,8 +127,9 @@ else:
                     global_running_r.append(episode_reward)
                 else:
                     global_running_r.append(global_running_r[-1] * 0.99 + 0.01 * episode_reward)
+            actor_loss, critic_loss = 0, 0
             for n_update in range(num_updates):
-                agent.train()
+                actor_loss, critic_loss = agent.train()
             agent.update_networks()
 
         ram = psutil.virtual_memory()
@@ -119,6 +138,9 @@ else:
               f"EP_reward:{episode_reward:.3f}| "
               f"Memory_length:{len(agent.memory)}| "
               f"Duration:{time.time() - start_time:3.3f}| "
+              f"Actor_Loss:{actor_loss:3.3f}| "
+              f"Critic_Loss:{critic_loss:3.3f}| "
+              f"Success rate:{info['is_success']}| "
               f"{to_gb(ram.used):.1f}/{to_gb(ram.total):.1f} GB RAM")
 
     # agent.save_weights()
