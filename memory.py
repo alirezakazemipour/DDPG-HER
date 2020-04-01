@@ -3,12 +3,13 @@ from copy import deepcopy as dc
 
 
 class Memory:
-    def __init__(self, capacity, k_future):
+    def __init__(self, capacity, k_future, env):
         self.capacity = capacity
         # self.batch_size = batch_size
         self.memory = []
         self.memory_counter = 0
         self.memory_length = 0
+        self.env = env
 
         self.future_p = 1 - (1. / (1 + k_future))
 
@@ -29,41 +30,33 @@ class Memory:
         states = []
         actions = []
         rewards = []
-        dones = []
         next_states = []
         goals = []
         for ep_idx, timestep, f_offset in zip(her_indices, her_timesteps, future_offsets):
             desired_goal = dc(self.memory[ep_idx]["achieved_goal"][timestep + f_offset])
-            if np.linalg.norm(desired_goal - self.memory[ep_idx]["next_achieved_goal"][timestep]) <= 0.05:
-                reward = dc(self.memory[ep_idx]["reward"][timestep])
-                done = dc(self.memory[ep_idx]["done"][timestep])
-                self.memory[ep_idx]["reward"][timestep] = 0
-                self.memory[ep_idx]["done"][timestep] = 1
-            else:
-                reward = dc(self.memory[ep_idx]["reward"][timestep])
-                done = dc(self.memory[ep_idx]["done"][timestep])
-                self.memory[ep_idx]["reward"][timestep] = -1
-                self.memory[ep_idx]["done"][timestep] = 0
+            reward = self.env.compute_reward(self.memory[ep_idx]["next_achieved_goal"][timestep].copy(), desired_goal, None)
+            # if np.linalg.norm(self.memory[ep_idx]["desired_goal"][timestep] - self.memory[ep_idx]["next_achieved_goal"][timestep]) <= 0.05:
+            #     self.memory[ep_idx]["reward"][timestep] = 0
+            #     self.memory[ep_idx]["done"][timestep] = 1
+            # else:
+            #
+            #     self.memory[ep_idx]["reward"][timestep] = -1
+            #     self.memory[ep_idx]["done"][timestep] = 0
 
-            states.append(self.memory[ep_idx]["state"][timestep])
-            actions.append(self.memory[ep_idx]["action"][timestep])
-            rewards.append(self.memory[ep_idx]["reward"][timestep])
-            dones.append(self.memory[ep_idx]["done"][timestep])
-            next_states.append(self.memory[ep_idx]["next_state"][timestep])
+            states.append(self.memory[ep_idx]["state"][timestep].copy())
+            actions.append(self.memory[ep_idx]["action"][timestep].copy())
+            rewards.append(reward)
+            next_states.append(self.memory[ep_idx]["next_state"][timestep].copy())
             goals.append(desired_goal)
 
-            # self.memory[ep_idx]["reward"][timestep] = reward
-            # self.memory[ep_idx]["done"][timestep] = done
-
         for ep_idx, timestep in zip(regular_indices, regular_timesteps):
-            states.append(self.memory[ep_idx]["state"][timestep])
-            actions.append(self.memory[ep_idx]["action"][timestep])
-            rewards.append(self.memory[ep_idx]["reward"][timestep])
-            dones.append(self.memory[ep_idx]["done"][timestep])
-            next_states.append(self.memory[ep_idx]["next_state"][timestep])
-            goals.append(self.memory[ep_idx]["desired_goal"][timestep])
+            states.append(self.memory[ep_idx]["state"][timestep].copy())
+            actions.append(self.memory[ep_idx]["action"][timestep].copy())
+            rewards.append(self.memory[ep_idx]["reward"][timestep].copy())
+            next_states.append(self.memory[ep_idx]["next_state"][timestep].copy())
+            goals.append(self.memory[ep_idx]["desired_goal"][timestep].copy())
 
-        return np.vstack(states), np.vstack(actions), np.vstack(rewards), np.vstack(dones), \
+        return np.vstack(states), np.vstack(actions), np.vstack(rewards), \
                np.vstack(next_states), np.vstack(goals)
 
     def add(self, **transition):
