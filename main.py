@@ -94,30 +94,19 @@ else:
                     action = agent.choose_action(state, desired_goal)
                     next_env_dict, reward, done, info = env.step(action)
 
-                    # if np.linalg.norm(achieved_goal - desired_goal) <= 0.05:
-                    #     reward = 0
-                    #     done = 1
-                    # else:
-                    #     reward = -1.0
-
-                    # if reward == 0:
-                    #     # print(f"did the job on epoch:{epoch}_cycle:{cycle}_episode:{episode}_step:{step}")
-                    #     done = 1
-
                     next_state = next_env_dict["observation"]
                     next_achieved_goal = next_env_dict["achieved_goal"]
                     next_desired_goal = next_env_dict["desired_goal"]
 
                     episode_dict["state"].append(state.copy())
                     episode_dict["action"].append(action.copy())
-                    episode_dict["reward"].append(reward)
                     episode_dict["achieved_goal"].append(achieved_goal.copy())
                     episode_dict["desired_goal"].append(desired_goal.copy())
                     episode_dict["next_state"].append(next_state.copy())
                     episode_dict["next_achieved_goal"].append(next_achieved_goal.copy())
 
                     state = next_state.copy()
-                    desired_goal = next_desired_goal.copy()
+                    achieved_goal = next_achieved_goal.copy()
                     episode_reward += reward
                 agent.store(dc(episode_dict))
 

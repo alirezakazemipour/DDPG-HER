@@ -124,6 +124,7 @@ class Agent:
         # if len(self.memory) < self.batch_size:
         #     return 0, 0
         states, actions, rewards, next_states, goals = self.memory.sample(self.batch_size)
+        # batch = self.memory.sample_her_transitions(self.batch_size)
         # states, actions, rewards, dones, next_states, goals = self.unpack_batch(batch)
         states = torch.Tensor(states).to(self.device)
         rewards = torch.Tensor(rewards).to(self.device)
