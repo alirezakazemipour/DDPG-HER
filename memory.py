@@ -43,8 +43,8 @@ class Memory:
             goals.append(desired_goal)
 
         for ep_idx, timestep in zip(regular_indices, regular_timesteps):
-            reward = self.env.compute_reward(self.memory[ep_idx]["next_achieved_goal"][timestep].copy(),
-                                             self.memory[ep_idx]["desired_goal"][timestep].copy(), None)
+            reward = self.env.compute_reward(self.memory[ep_idx]["next_achieved_goal"][timestep],
+                                             self.memory[ep_idx]["desired_goal"][timestep], None)
             states.append(self.memory[ep_idx]["state"][timestep].copy())
             actions.append(self.memory[ep_idx]["action"][timestep].copy())
             rewards.append(reward)

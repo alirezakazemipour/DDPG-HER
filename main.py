@@ -10,6 +10,7 @@ import psutil
 import time
 from copy import deepcopy as dc
 import os
+import torch
 
 ENV_NAME = "FetchPickAndPlace-v1"
 INTRO = False
@@ -18,7 +19,7 @@ MAX_CYCLES = 50
 num_updates = 40
 MAX_EPISODES = 16 // os.cpu_count()
 memory_size = 7e+5 // 50 // os.cpu_count()
-batch_size = 128
+batch_size = 256
 actor_lr = 1e-3
 critic_lr = 1e-3
 gamma = 0.98
@@ -31,6 +32,29 @@ n_actions = test_env.action_space.shape[0]
 n_goals = test_env.observation_space.spaces["desired_goal"].shape[0]
 action_bounds = [test_env.action_space.low[0], test_env.action_space.high[0]]
 to_gb = lambda in_bytes: in_bytes / 1024 / 1024 / 1024
+
+
+def eval_agent():
+    total_success_rate = []
+    for _ in range(10):
+        per_success_rate = []
+        observation = env.reset()
+        obs = observation['observation']
+        g = observation['desired_goal']
+        done = False
+        while not done:
+            with torch.no_grad():
+                action = agent.choose_action(obs, g)
+            observation_new, _, _, info = env.step(action)
+            obs = observation_new['observation']
+            g = observation_new['desired_goal']
+            per_success_rate.append(info['is_success'])
+        total_success_rate.append(per_success_rate)
+    total_success_rate = np.array(total_success_rate)
+    local_success_rate = np.mean(total_success_rate[:, -1])
+    global_success_rate = MPI.COMM_WORLD.allreduce(local_success_rate, op=MPI.SUM)
+    return global_success_rate / MPI.COMM_WORLD.Get_size()
+
 
 if INTRO:
     print(f"state_shape:{state_shape}\n"
@@ -71,12 +95,10 @@ else:
                 episode_dict = {
                     "state": [],
                     "action": [],
-                    "reward": [],
                     "achieved_goal": [],
                     "desired_goal": [],
                     "next_state": [],
-                    "next_achieved_goal": [],
-                    "next_desired_goal": []}
+                    "next_achieved_goal": []}
                 done = 0
                 env_dict = env.reset()
                 agent.reset_randomness()
@@ -123,6 +145,7 @@ else:
 
         if MPI.COMM_WORLD.rank == 0:
             ram = psutil.virtual_memory()
+            succes_rate = eval_agent()
             print(f"Epoch:{epoch}| "
                   f"EP_running_r:{global_running_r[-1]:.3f}| "
                   f"EP_reward:{episode_reward:.3f}| "
@@ -130,7 +153,7 @@ else:
                   f"Duration:{time.time() - start_time:3.3f}| "
                   f"Actor_Loss:{actor_loss:3.3f}| "
                   f"Critic_Loss:{critic_loss:3.3f}| "
-                  f"Success rate:{info['is_success']}| "
+                  f"Success rate:{succes_rate}| "
                   f"{to_gb(ram.used):.1f}/{to_gb(ram.total):.1f} GB RAM")
 
     # agent.save_weights()
@@ -151,3 +174,5 @@ else:
     # plt.title("Critic loss")
     #
     # plt.show()
+
+

@@ -63,7 +63,7 @@ class Agent:
         self.actor.train()
 
         if self.training_mode:
-            action += max(self.epsilon, 0) * self.random_process.sample()
+            action += max(self.epsilon, 0) * self.random_process.sample() * 0.2 * self.action_bounds[1]
             self.epsilon -= self.epsilon_decay
 
         action = np.clip(action, self.action_bounds[0], self.action_bounds[1])
