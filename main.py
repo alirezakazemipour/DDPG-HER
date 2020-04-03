@@ -45,7 +45,7 @@ def eval_agent():
         while not done:
             with torch.no_grad():
                 action = agent.choose_action(obs, g)
-            observation_new, _, _, info = env.step(action)
+            observation_new, _, done, info = env.step(action)
             obs = observation_new['observation']
             g = observation_new['desired_goal']
             per_success_rate.append(info['is_success'])
@@ -143,18 +143,18 @@ else:
                 actor_loss, critic_loss = agent.train()
             agent.update_networks()
 
-        if MPI.COMM_WORLD.rank == 0:
-            ram = psutil.virtual_memory()
-            succes_rate = eval_agent()
-            print(f"Epoch:{epoch}| "
-                  f"EP_running_r:{global_running_r[-1]:.3f}| "
-                  f"EP_reward:{episode_reward:.3f}| "
-                  f"Memory_length:{len(agent.memory)}| "
-                  f"Duration:{time.time() - start_time:3.3f}| "
-                  f"Actor_Loss:{actor_loss:3.3f}| "
-                  f"Critic_Loss:{critic_loss:3.3f}| "
-                  f"Success rate:{succes_rate}| "
-                  f"{to_gb(ram.used):.1f}/{to_gb(ram.total):.1f} GB RAM")
+        # if MPI.COMM_WORLD.rank == 0:
+        ram = psutil.virtual_memory()
+        succes_rate = eval_agent()
+        print(f"Epoch:{epoch}| "
+              f"EP_running_r:{global_running_r[-1]:.3f}| "
+              f"EP_reward:{episode_reward:.3f}| "
+              f"Memory_length:{len(agent.memory)}| "
+              f"Duration:{time.time() - start_time:3.3f}| "
+              f"Actor_Loss:{actor_loss:3.3f}| "
+              f"Critic_Loss:{critic_loss:3.3f}| "
+              f"Success rate:{succes_rate}| "
+              f"{to_gb(ram.used):.1f}/{to_gb(ram.total):.1f} GB RAM")
 
     # agent.save_weights()
     # player = Play(env, agent)
