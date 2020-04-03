@@ -74,7 +74,6 @@ class Agent:
         self.random_process.reset_states()
 
     def store(self, episode_dict):
-
         self.memory.add(**episode_dict)
 
     def init_target_networks(self):

@@ -51,8 +51,8 @@ class Memory:
             next_states.append(self.memory[ep_idx]["next_state"][timestep].copy())
             goals.append(self.memory[ep_idx]["desired_goal"][timestep].copy())
 
-        return np.vstack(states), np.vstack(actions), np.vstack(rewards), \
-               np.vstack(next_states), np.vstack(goals)
+        return self.clip_obs(np.vstack(states)), np.vstack(actions), np.vstack(rewards), \
+               self.clip_obs(np.vstack(next_states)), self.clip_obs(np.vstack(goals))
 
     def add(self, **transition):
         self.memory.append(transition)
@@ -69,3 +69,7 @@ class Memory:
 
     def clear_memory(self):
         self.memory = []
+
+    @staticmethod
+    def clip_obs(x):
+        return np.clip(x, -200, 200)
