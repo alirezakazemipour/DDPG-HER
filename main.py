@@ -5,17 +5,19 @@ import numpy as np
 from play import Play
 import mujoco_py
 import random
+from mpi4py import MPI
 import psutil
 import time
 from copy import deepcopy as dc
+import os
 
-ENV_NAME = "FetchReach-v1"
+ENV_NAME = "FetchPickAndPlace-v1"
 INTRO = False
 MAX_EPOCHS = 200
-MAX_CYCLES = 20
+MAX_CYCLES = 50
 num_updates = 40
-MAX_EPISODES = 16
-memory_size = 7e+5 // 50
+MAX_EPISODES = 16 // os.cpu_count()
+memory_size = 7e+5 // 50 // os.cpu_count()
 batch_size = 128
 actor_lr = 1e-3
 critic_lr = 1e-3
@@ -59,7 +61,7 @@ else:
                   gamma=gamma,
                   tau=tau,
                   k_future=k_future,
-                  env = dc(env))
+                  env=dc(env))
 
     global_running_r = []
     for epoch in range(MAX_EPOCHS):
@@ -119,16 +121,17 @@ else:
                 actor_loss, critic_loss = agent.train()
             agent.update_networks()
 
-        ram = psutil.virtual_memory()
-        print(f"Epoch:{epoch}| "
-              f"EP_running_r:{global_running_r[-1]:.3f}| "
-              f"EP_reward:{episode_reward:.3f}| "
-              f"Memory_length:{len(agent.memory)}| "
-              f"Duration:{time.time() - start_time:3.3f}| "
-              f"Actor_Loss:{actor_loss:3.3f}| "
-              f"Critic_Loss:{critic_loss:3.3f}| "
-              f"Success rate:{info['is_success']}| "
-              f"{to_gb(ram.used):.1f}/{to_gb(ram.total):.1f} GB RAM")
+        if MPI.COMM_WORLD.rank == 0:
+            ram = psutil.virtual_memory()
+            print(f"Epoch:{epoch}| "
+                  f"EP_running_r:{global_running_r[-1]:.3f}| "
+                  f"EP_reward:{episode_reward:.3f}| "
+                  f"Memory_length:{len(agent.memory)}| "
+                  f"Duration:{time.time() - start_time:3.3f}| "
+                  f"Actor_Loss:{actor_loss:3.3f}| "
+                  f"Critic_Loss:{critic_loss:3.3f}| "
+                  f"Success rate:{info['is_success']}| "
+                  f"{to_gb(ram.used):.1f}/{to_gb(ram.total):.1f} GB RAM")
 
     # agent.save_weights()
     # player = Play(env, agent)

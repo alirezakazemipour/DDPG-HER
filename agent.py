@@ -5,7 +5,7 @@ from models import Actor, Critic
 from random_process import OrnsteinUhlenbeckProcess
 from memory import Memory
 from torch.optim import Adam
-from copy import deepcopy as dc
+from mpi4py import MPI
 
 
 class Agent:
@@ -17,7 +17,6 @@ class Agent:
                  actor_lr=1e-4,
                  critic_lr=1e-3,
                  gamma=0.99):
-        # self.device = device("cuda" if torch.cuda.is_available() else "cpu")
         self.device = device("cpu")
         self.n_states = n_states
         self.n_actions = n_actions
@@ -29,10 +28,10 @@ class Agent:
 
         self.actor = Actor(self.n_states, n_actions=self.n_actions, n_goals=self.n_goals).to(self.device)
         self.critic = Critic(self.n_states, action_size=self.action_size, n_goals=self.n_goals).to(self.device)
+        self.sync_networks(self.actor)
+        self.sync_networks(self.critic)
         self.actor_target = Actor(self.n_states, n_actions=self.n_actions, n_goals=self.n_goals).to(self.device)
         self.critic_target = Critic(self.n_states, action_size=self.action_size, n_goals=self.n_goals).to(self.device)
-        # self.actor_target.eval()
-        # self.critic_target.eval()
         self.init_target_networks()
         self.training_mode = 1
         self.tau = tau
@@ -75,21 +74,6 @@ class Agent:
         self.random_process.reset_states()
 
     def store(self, episode_dict):
-        # states = [from_numpy(state).float().to("cpu") for state in episode_dict["state"]]
-        # episode_dict["state"] = dc(states)
-        # actions = [from_numpy(action).float().to("cpu") for action in episode_dict["action"]]
-        # episode_dict["action"] = dc(actions)
-        # # rewards = [torch.FloatTensor([reward]) for reward in episode_dict["reward"]]
-        # # episode_dict["reward"] = dc(rewards)
-        # achieved_goals = [from_numpy(a_goal).float().to("cpu") for a_goal in episode_dict["achieved_goal"]]
-        # episode_dict["achieved_goal"] = dc(achieved_goals)
-        # desired_goals = [from_numpy(d_goal).float().to("cpu") for d_goal in episode_dict["desired_goal"]]
-        # episode_dict["desired_goal"] = dc(desired_goals)
-        # next_states = [from_numpy(state).float().to("cpu") for state in episode_dict["next_state"]]
-        # episode_dict["next_state"] = dc(next_states)
-        # next_achieved_goals = [
-        #     from_numpy(next_a_goal).float().to("cpu") for next_a_goal in episode_dict["next_achieved_goal"]]
-        # episode_dict["next_achieved_goal"] = dc(next_achieved_goals)
 
         self.memory.add(**episode_dict)
 
@@ -107,25 +91,9 @@ class Agent:
         for t_params, e_params in zip(target_model.parameters(), local_model.parameters()):
             t_params.data.copy_(tau * e_params.data + (1 - tau) * t_params.data)
 
-    # def unpack_batch(self, batch):
-    #
-    #     batch = Transition(*zip(*batch))
-    #
-    #     states = torch.cat(batch.state).to(self.device).view(self.batch_size, *self.n_states)
-    #     actions = torch.cat(batch.action).to(self.device).view((-1, self.n_actions))
-    #     rewards = torch.cat(batch.reward).to(self.device).view(self.batch_size, 1)
-    #     dones = torch.cat(batch.done).to(self.device).view(self.batch_size, 1)
-    #     next_states = torch.cat(batch.next_state).to(self.device).view(self.batch_size, *self.n_states)
-    #     goals = torch.cat(batch.goal).to(self.device).view(self.batch_size, self.n_goals)
-    #
-    #     return states, actions, rewards, dones, next_states, goals
-
     def train(self):
-        # if len(self.memory) < self.batch_size:
-        #     return 0, 0
+
         states, actions, rewards, next_states, goals = self.memory.sample(self.batch_size)
-        # batch = self.memory.sample_her_transitions(self.batch_size)
-        # states, actions, rewards, dones, next_states, goals = self.unpack_batch(batch)
         states = torch.Tensor(states).to(self.device)
         rewards = torch.Tensor(rewards).to(self.device)
         next_states = torch.Tensor(next_states).to(self.device)
@@ -146,12 +114,12 @@ class Agent:
 
         self.actor_optim.zero_grad()
         actor_loss.backward()
-        # print("A: ", actor_loss.item())
+        self.sync_grads(self.actor)
         self.actor_optim.step()
 
         self.critic_optim.zero_grad()
         critic_loss.backward()
-        # print("C: ", critic_loss.item())
+        self.sync_grads(self.critic)
         self.critic_optim.step()
 
         return actor_loss, critic_loss
@@ -172,3 +140,32 @@ class Agent:
         self.soft_update_networks(self.actor, self.actor_target, self.tau)
         self.soft_update_networks(self.critic, self.critic_target, self.tau)
 
+    @staticmethod
+    def sync_networks(network):
+        comm = MPI.COMM_WORLD
+        flat_params = _get_flat_params_or_grads(network, mode='params')
+        comm.Bcast(flat_params, root=0)
+        _set_flat_params_or_grads(network, flat_params, mode='params')
+
+    @staticmethod
+    def sync_grads(network):
+        flat_grads = _get_flat_params_or_grads(network, mode='grads')
+        comm = MPI.COMM_WORLD
+        global_grads = np.zeros_like(flat_grads)
+        comm.Allreduce(flat_grads, global_grads, op=MPI.SUM)
+        _set_flat_params_or_grads(network, global_grads, mode='grads')
+
+
+def _get_flat_params_or_grads(network, mode='params'):
+    attr = 'data' if mode == 'params' else 'grad'
+    return np.concatenate([getattr(param, attr).cpu().numpy().flatten() for param in network.parameters()])
+
+
+def _set_flat_params_or_grads(network, flat_params, mode='params'):
+
+    attr = 'data' if mode == 'params' else 'grad'
+    pointer = 0
+    for param in network.parameters():
+        getattr(param, attr).copy_(
+            torch.tensor(flat_params[pointer:pointer + param.data.numel()]).view_as(param.data))
+        pointer += param.data.numel()
