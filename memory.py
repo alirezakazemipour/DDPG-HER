@@ -1,5 +1,6 @@
 import numpy as np
 from copy import deepcopy as dc
+import random
 
 
 class Memory:
@@ -34,7 +35,7 @@ class Memory:
         for ep_idx, timestep, f_offset in zip(her_indices, her_timesteps, future_offsets):
             desired_goal = dc(self.memory[ep_idx]["achieved_goal"][timestep + f_offset])
             reward = self.env.compute_reward(self.memory[ep_idx]["next_achieved_goal"][timestep].copy(), desired_goal,
-                                             None)
+                                             self.memory[ep_idx]["info"][timestep].copy())
 
             states.append(self.memory[ep_idx]["state"][timestep].copy())
             actions.append(self.memory[ep_idx]["action"][timestep].copy())
@@ -44,7 +45,9 @@ class Memory:
 
         for ep_idx, timestep in zip(regular_indices, regular_timesteps):
             reward = self.env.compute_reward(self.memory[ep_idx]["next_achieved_goal"][timestep],
-                                             self.memory[ep_idx]["desired_goal"][timestep], None)
+                                             self.memory[ep_idx]["desired_goal"][timestep],
+                                             self.memory[ep_idx]["info"][timestep].copy())
+
             states.append(self.memory[ep_idx]["state"][timestep].copy())
             actions.append(self.memory[ep_idx]["action"][timestep].copy())
             rewards.append(reward)

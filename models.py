@@ -26,15 +26,15 @@ class Actor(nn.Module):
         self.output = nn.Linear(in_features=self.n_hidden3, out_features=self.n_actions)
         self.tanh = nn.Tanh()
 
-        # self.fc1.weight.data = init_weights_biases(self.fc1.weight.data.size())
-        # self.fc1.bias.data = init_weights_biases(self.fc1.bias.data.size())
-        # self.fc2.weight.data = init_weights_biases(self.fc2.weight.data.size())
-        # self.fc2.bias.data = init_weights_biases(self.fc2.bias.data.size())
-        # self.fc3.weight.data = init_weights_biases(self.fc3.weight.data.size())
-        # self.fc3.bias.data = init_weights_biases(self.fc3.bias.data.size())
-        #
-        # self.output.weight.data.uniform_(-self.initial_w, self.initial_w)
-        # self.output.bias.data.uniform_(-self.initial_w, self.initial_w)
+        self.fc1.weight.data = init_weights_biases(self.fc1.weight.data.size())
+        self.fc1.bias.data = init_weights_biases(self.fc1.bias.data.size())
+        self.fc2.weight.data = init_weights_biases(self.fc2.weight.data.size())
+        self.fc2.bias.data = init_weights_biases(self.fc2.bias.data.size())
+        self.fc3.weight.data = init_weights_biases(self.fc3.weight.data.size())
+        self.fc3.bias.data = init_weights_biases(self.fc3.bias.data.size())
+
+        self.output.weight.data.uniform_(-self.initial_w, self.initial_w)
+        self.output.bias.data.uniform_(-self.initial_w, self.initial_w)
 
     def forward(self, x, g):
         x = F.relu(self.fc1(torch.cat([x, g], dim=-1)))
@@ -61,15 +61,15 @@ class Critic(nn.Module):
         self.fc3 = nn.Linear(in_features=self.n_hidden2, out_features=self.n_hidden3)
         self.output = nn.Linear(in_features=self.n_hidden3, out_features=1)
 
-        # self.fc1.weight.data = init_weights_biases(self.fc1.weight.data.size())
-        # self.fc1.bias.data = init_weights_biases(self.fc1.bias.data.size())
-        # self.fc2.weight.data = init_weights_biases(self.fc2.weight.data.size())
-        # self.fc2.bias.data = init_weights_biases(self.fc2.bias.data.size())
-        # self.fc3.weight.data = init_weights_biases(self.fc3.weight.data.size())
-        # self.fc3.bias.data = init_weights_biases(self.fc3.bias.data.size())
+        self.fc1.weight.data = init_weights_biases(self.fc1.weight.data.size())
+        self.fc1.bias.data = init_weights_biases(self.fc1.bias.data.size())
+        self.fc2.weight.data = init_weights_biases(self.fc2.weight.data.size())
+        self.fc2.bias.data = init_weights_biases(self.fc2.bias.data.size())
+        self.fc3.weight.data = init_weights_biases(self.fc3.weight.data.size())
+        self.fc3.bias.data = init_weights_biases(self.fc3.bias.data.size())
 
-        # self.output.weight.data.uniform_(-self.initial_w, self.initial_w)
-        # self.output.bias.data.uniform_(-self.initial_w, self.initial_w)
+        self.output.weight.data.uniform_(-self.initial_w, self.initial_w)
+        self.output.bias.data.uniform_(-self.initial_w, self.initial_w)
 
     def forward(self, x, g, a):
         x = F.relu(self.fc1(torch.cat([x, g, a], dim=-1)))

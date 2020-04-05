@@ -36,24 +36,39 @@ to_gb = lambda in_bytes: in_bytes / 1024 / 1024 / 1024
 
 def eval_agent():
     total_success_rate = []
-    for _ in range(10):
+    running_reward = []
+    for ep in range(10):
         per_success_rate = []
-        observation = env.reset()
-        obs = observation['observation']
-        g = observation['desired_goal']
+        env_dict = env.reset()
+        agent.reset_randomness()
+        s = env_dict["observation"]
+        ag = env_dict["achieved_goal"]
+        g = env_dict["desired_goal"]
+        while np.linalg.norm(ag - g) <= 0.05:
+            env_dict = env.reset()
+            agent.reset_randomness()
+            s = env_dict["observation"]
+            ag = env_dict["achieved_goal"]
+            g = env_dict["desired_goal"]
         done = False
+        episode_reward = 0
         while not done:
             with torch.no_grad():
-                action = agent.choose_action(obs, g)
-            observation_new, _, done, info = env.step(action)
-            obs = observation_new['observation']
+                action = agent.choose_action(s, g)
+            observation_new, reward, done, info = env.step(action)
+            s = observation_new['observation']
             g = observation_new['desired_goal']
             per_success_rate.append(info['is_success'])
+            episode_reward += reward
         total_success_rate.append(per_success_rate)
+        if ep == 0:
+            running_reward.append(episode_reward)
+        else:
+            running_reward.append(running_reward[-1] * 0.99 + 0.01 * episode_reward)
     total_success_rate = np.array(total_success_rate)
     local_success_rate = np.mean(total_success_rate[:, -1])
     global_success_rate = MPI.COMM_WORLD.allreduce(local_success_rate, op=MPI.SUM)
-    return global_success_rate / MPI.COMM_WORLD.Get_size()
+    return global_success_rate / MPI.COMM_WORLD.Get_size(), running_reward, episode_reward
 
 
 if INTRO:
@@ -87,7 +102,6 @@ else:
                   k_future=k_future,
                   env=dc(env))
 
-    global_running_r = []
     for epoch in range(MAX_EPOCHS):
         start_time = time.time()
         for cycle in range(MAX_CYCLES):
@@ -96,6 +110,7 @@ else:
                 episode_dict = {
                     "state": [],
                     "action": [],
+                    "info": [],
                     "achieved_goal": [],
                     "desired_goal": [],
                     "next_state": [],
@@ -125,6 +140,7 @@ else:
 
                     episode_dict["state"].append(state.copy())
                     episode_dict["action"].append(action.copy())
+                    episode_dict["info"].append(info.copy())
                     episode_dict["achieved_goal"].append(achieved_goal.copy())
                     episode_dict["desired_goal"].append(desired_goal.copy())
                     episode_dict["next_state"].append(next_state.copy())
@@ -137,11 +153,6 @@ else:
                 # agent.store(dc(episode_dict))
                 mb.append(dc(episode_dict))
 
-                if episode == 0:
-                    global_running_r.append(episode_reward)
-                else:
-                    global_running_r.append(global_running_r[-1] * 0.99 + 0.01 * episode_reward)
-
             agent.store(mb)
             actor_loss, critic_loss = 0, 0
             for n_update in range(num_updates):
@@ -150,9 +161,9 @@ else:
 
         # if MPI.COMM_WORLD.rank == 0:
         ram = psutil.virtual_memory()
-        succes_rate = eval_agent()
+        succes_rate, running_reward, episode_reward = eval_agent()
         print(f"Epoch:{epoch}| "
-              f"EP_running_r:{global_running_r[-1]:.3f}| "
+              f"Running_reward:{running_reward[-1]:.3f}| "
               f"EP_reward:{episode_reward:.3f}| "
               f"Memory_length:{len(agent.memory)}| "
               f"Duration:{time.time() - start_time:3.3f}| "
