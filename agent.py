@@ -73,8 +73,9 @@ class Agent:
     def reset_randomness(self):
         self.random_process.reset_states()
 
-    def store(self, episode_dict):
-        self.memory.add(**episode_dict)
+    def store(self, mini_batch):
+        for episode_dict in mini_batch:
+            self.memory.add(episode_dict)
 
     def init_target_networks(self):
         self.hard_update_networks(self.actor, self.actor_target)

@@ -54,7 +54,7 @@ class Memory:
         return self.clip_obs(np.vstack(states)), np.vstack(actions), np.vstack(rewards), \
                self.clip_obs(np.vstack(next_states)), self.clip_obs(np.vstack(goals))
 
-    def add(self, **transition):
+    def add(self, transition):
         self.memory.append(transition)
         if len(self.memory) > self.capacity:
             self.memory.pop(0)

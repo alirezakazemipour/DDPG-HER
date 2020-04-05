@@ -91,6 +91,7 @@ else:
     for epoch in range(MAX_EPOCHS):
         start_time = time.time()
         for cycle in range(MAX_CYCLES):
+            mb = []
             for episode in range(MAX_EPISODES):
                 episode_dict = {
                     "state": [],
@@ -131,13 +132,17 @@ else:
 
                     state = next_state.copy()
                     achieved_goal = next_achieved_goal.copy()
+                    desired_goal = next_desired_goal.copy()
                     episode_reward += reward
-                agent.store(dc(episode_dict))
+                # agent.store(dc(episode_dict))
+                mb.append(dc(episode_dict))
 
                 if episode == 0:
                     global_running_r.append(episode_reward)
                 else:
                     global_running_r.append(global_running_r[-1] * 0.99 + 0.01 * episode_reward)
+
+            agent.store(mb)
             actor_loss, critic_loss = 0, 0
             for n_update in range(num_updates):
                 actor_loss, critic_loss = agent.train()
@@ -153,7 +158,7 @@ else:
               f"Duration:{time.time() - start_time:3.3f}| "
               f"Actor_Loss:{actor_loss:3.3f}| "
               f"Critic_Loss:{critic_loss:3.3f}| "
-              f"Success rate:{succes_rate}| "
+              f"Success rate:{succes_rate:.3f}| "
               f"{to_gb(ram.used):.1f}/{to_gb(ram.total):.1f} GB RAM")
 
     # agent.save_weights()
@@ -174,5 +179,3 @@ else:
     # plt.title("Critic loss")
     #
     # plt.show()
-
-
