@@ -40,13 +40,13 @@ def eval_agent():
     for ep in range(10):
         per_success_rate = []
         env_dict = env.reset()
-        agent.reset_randomness()
+        # agent.reset_randomness()
         s = env_dict["observation"]
         ag = env_dict["achieved_goal"]
         g = env_dict["desired_goal"]
         while np.linalg.norm(ag - g) <= 0.05:
             env_dict = env.reset()
-            agent.reset_randomness()
+            # agent.reset_randomness()
             s = env_dict["observation"]
             ag = env_dict["achieved_goal"]
             g = env_dict["desired_goal"]
@@ -117,19 +117,20 @@ else:
                     "next_achieved_goal": []}
                 done = 0
                 env_dict = env.reset()
-                agent.reset_randomness()
+                # agent.reset_randomness()
                 state = env_dict["observation"]
                 achieved_goal = env_dict["achieved_goal"]
                 desired_goal = env_dict["desired_goal"]
                 while np.linalg.norm(achieved_goal - desired_goal) <= 0.05:
                     env_dict = env.reset()
-                    agent.reset_randomness()
+                    # agent.reset_randomness()
                     state = env_dict["observation"]
                     achieved_goal = env_dict["achieved_goal"]
                     desired_goal = env_dict["desired_goal"]
                 episode_reward = 0
                 step = 0
                 while not done:
+                    # env.render()
                     step += 1
                     action = agent.choose_action(state, desired_goal)
                     next_env_dict, reward, done, info = env.step(action)

@@ -6,7 +6,14 @@ import random
 class Memory:
     def __init__(self, capacity, k_future, env):
         self.capacity = capacity
-        self.memory = []
+        self.memory = {"state": [],
+                       "action": [],
+                       "info": [],
+                       "achieved_goal": [],
+                       "desired_goal": [],
+                       "next_state": [],
+                       "next_achieved_goal": []
+                       }
         self.memory_counter = 0
         self.memory_length = 0
         self.env = env
@@ -58,20 +65,20 @@ class Memory:
                self.clip_obs(np.vstack(next_states)), self.clip_obs(np.vstack(goals))
 
     def add(self, transition):
-        self.memory.append(transition)
-        if len(self.memory) > self.capacity:
+        self.memory["state"].append(transition["state"])
+        self.memory["action"].append(transition["action"])
+        self.memory["info"].append(transition["info"])
+        self.memory["achieved_goal"].append(transition["achieved_goal"])
+        self.memory["desired_goal"].append(transition["desired_goal"])
+        self.memory["next_state"].append(transition["next_state"])
+        self.memory["next_achieved_goal"].append(transition["next_achieved_goal"])
+
+        if len(self.memory["state"][0]) > self.capacity:
             self.memory.pop(0)
         assert len(self.memory) <= self.capacity
-        # self.__update_length__(transition)
 
     def __len__(self):
         return len(self.memory)
-
-    def __update_length__(self, transition):
-        self.memory_length += len(transition["state"])
-
-    def clear_memory(self):
-        self.memory = []
 
     @staticmethod
     def clip_obs(x):

@@ -2,7 +2,6 @@ import torch
 from torch import from_numpy, device
 import numpy as np
 from models import Actor, Critic
-from random_process import OrnsteinUhlenbeckProcess
 from memory import Memory
 from torch.optim import Adam
 from mpi4py import MPI
@@ -39,7 +38,7 @@ class Agent:
 
         self.epsilon = 1
         self.epsilon_decay = 0.05
-        self.random_process = OrnsteinUhlenbeckProcess()
+        # self.random_process = OrnsteinUhlenbeckProcess()
         self.capacity = capacity
         self.memory = Memory(self.capacity, self.k_future, self.env)
 
@@ -62,16 +61,15 @@ class Agent:
             action = self.actor(state, goal)[0].cpu().data.numpy()
         self.actor.train()
 
-        if self.training_mode:
-            action += max(self.epsilon, 0) * self.random_process.sample() * 0.2 * self.action_bounds[1]
-            self.epsilon -= self.epsilon_decay
-
+        action += 0.2 * np.random.randn(self.n_actions)
         action = np.clip(action, self.action_bounds[0], self.action_bounds[1])
 
+        random_actions = np.random.uniform(low=self.action_bounds[0], high=self.action_bounds[1], size=self.n_actions)
+        action += np.random.binomial(1, 0.3, 1)[0] * (random_actions - action)
         return action
 
-    def reset_randomness(self):
-        self.random_process.reset_states()
+    # def reset_randomness(self):
+    #     self.random_process.reset_states()
 
     def store(self, mini_batch):
         for episode_dict in mini_batch:
