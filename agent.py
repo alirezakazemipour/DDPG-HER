@@ -32,13 +32,9 @@ class Agent:
         self.actor_target = Actor(self.n_states, n_actions=self.n_actions, n_goals=self.n_goals).to(self.device)
         self.critic_target = Critic(self.n_states, action_size=self.action_size, n_goals=self.n_goals).to(self.device)
         self.init_target_networks()
-        self.training_mode = 1
         self.tau = tau
         self.gamma = gamma
 
-        self.epsilon = 1
-        self.epsilon_decay = 0.05
-        # self.random_process = OrnsteinUhlenbeckProcess()
         self.capacity = capacity
         self.memory = Memory(self.capacity, self.k_future, self.env)
 
@@ -82,7 +78,7 @@ class Agent:
     @staticmethod
     def hard_update_networks(local_model, target_model):
         target_model.load_state_dict(local_model.state_dict())
-        target_model.eval()
+        # target_model.eval()
 
     @staticmethod
     def soft_update_networks(local_model, target_model, tau=0.05):
@@ -90,6 +86,9 @@ class Agent:
             t_params.data.copy_(tau * e_params.data + (1 - tau) * t_params.data)
 
     def train(self):
+
+        if len(self.memory) < self.batch_size:
+            return 0, 0
 
         states, actions, rewards, next_states, goals = self.memory.sample(self.batch_size)
         states = torch.Tensor(states).to(self.device)

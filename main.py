@@ -141,7 +141,6 @@ else:
 
                     episode_dict["state"].append(state.copy())
                     episode_dict["action"].append(action.copy())
-                    episode_dict["info"].append(info.copy())
                     episode_dict["achieved_goal"].append(achieved_goal.copy())
                     episode_dict["desired_goal"].append(desired_goal.copy())
                     episode_dict["next_state"].append(next_state.copy())
