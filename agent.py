@@ -5,6 +5,7 @@ from models import Actor, Critic
 from memory import Memory
 from torch.optim import Adam
 from mpi4py import MPI
+from normalizer import Normalizer
 
 
 class Agent:
@@ -46,7 +47,12 @@ class Agent:
 
         self.critic_loss_fn = torch.nn.MSELoss()
 
+        self.state_normalizer = Normalizer(self.n_states, 5)
+        self.goal_normalizer = Normalizer(self.n_goals, 5)
+
     def choose_action(self, state, goal):
+        state = self.state_normalizer.normalize(state)
+        goal = self.goal_normalizer.normalize(goal)
         state = np.expand_dims(state, axis=0)
         state = from_numpy(state).float().to(self.device)
         goal = np.expand_dims(goal, axis=0)
@@ -64,12 +70,9 @@ class Agent:
         action += np.random.binomial(1, 0.3, 1)[0] * (random_actions - action)
         return action
 
-    # def reset_randomness(self):
-    #     self.random_process.reset_states()
-
     def store(self, mini_batch):
-        # for episode_dict in mini_batch:
         self.memory.add(mini_batch)
+        self._update_normalizer(mini_batch)
 
     def init_target_networks(self):
         self.hard_update_networks(self.actor, self.actor_target)
@@ -91,6 +94,11 @@ class Agent:
             return 0, 0
 
         states, actions, rewards, next_states, goals = self.memory.sample(self.batch_size)
+
+        states = self.state_normalizer.normalize(states)
+        next_states = self.state_normalizer.normalize(next_states)
+        goals = self.goal_normalizer.normalize(goals)
+        
         states = torch.Tensor(states).to(self.device)
         rewards = torch.Tensor(rewards).to(self.device)
         next_states = torch.Tensor(next_states).to(self.device)
@@ -136,6 +144,14 @@ class Agent:
     def update_networks(self):
         self.soft_update_networks(self.actor, self.actor_target, self.tau)
         self.soft_update_networks(self.critic, self.critic_target, self.tau)
+
+    def _update_normalizer(self, mini_batch):
+        states, goals = self.memory.sample_for_normalization(mini_batch)
+
+        self.state_normalizer.update(states)
+        self.goal_normalizer.update(goals)
+        self.state_normalizer.recompute_stats()
+        self.goal_normalizer.recompute_stats()
 
     @staticmethod
     def sync_networks(network):

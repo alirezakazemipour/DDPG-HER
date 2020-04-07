@@ -164,19 +164,19 @@ else:
                 actor_loss, critic_loss = agent.train()
             agent.update_networks()
 
-        if MPI.COMM_WORLD.Get_rank() == 0:
-            ram = psutil.virtual_memory()
-            succes_rate, running_reward, episode_reward = eval_agent()
-            total_success_rate.append(succes_rate)
-            print(f"Epoch:{epoch}| "
-                  f"Running_reward:{running_reward[-1]:.3f}| "
-                  f"EP_reward:{episode_reward:.3f}| "
-                  f"Memory_length:{len(agent.memory)}| "
-                  f"Duration:{time.time() - start_time:3.3f}| "
-                  f"Actor_Loss:{actor_loss:3.3f}| "
-                  f"Critic_Loss:{critic_loss:3.3f}| "
-                  f"Success rate:{succes_rate:.3f}| "
-                  f"{to_gb(ram.used):.1f}/{to_gb(ram.total):.1f} GB RAM")
+        # if MPI.COMM_WORLD.Get_rank() == 0:
+        ram = psutil.virtual_memory()
+        succes_rate, running_reward, episode_reward = eval_agent()
+        total_success_rate.append(succes_rate)
+        print(f"Epoch:{epoch}| "
+              f"Running_reward:{running_reward[-1]:.3f}| "
+              f"EP_reward:{episode_reward:.3f}| "
+              f"Memory_length:{len(agent.memory)}| "
+              f"Duration:{time.time() - start_time:3.3f}| "
+              f"Actor_Loss:{actor_loss:3.3f}| "
+              f"Critic_Loss:{critic_loss:3.3f}| "
+              f"Success rate:{succes_rate:.3f}| "
+              f"{to_gb(ram.used):.1f}/{to_gb(ram.total):.1f} GB RAM")
         agent.save_weights()
 
     # player = Play(env, agent)
