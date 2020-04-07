@@ -18,7 +18,7 @@ MAX_EPOCHS = 200
 MAX_CYCLES = 50
 num_updates = 40
 MAX_EPISODES = 16 // os.cpu_count()
-memory_size = 7e+5 // 50 // os.cpu_count()
+memory_size = 9000 // 2  # 7e+5 // os.cpu_count()
 batch_size = 256
 actor_lr = 1e-3
 critic_lr = 1e-3
@@ -88,6 +88,10 @@ if INTRO:
             test_env.render()
 else:
     env = gym.make(ENV_NAME)
+    env.seed(MPI.COMM_WORLD.Get_rank())
+    random.seed(MPI.COMM_WORLD.Get_rank())
+    np.random.seed(MPI.COMM_WORLD.Get_rank())
+    torch.manual_seed(MPI.COMM_WORLD.Get_rank())
     agent = Agent(n_states=state_shape,
                   n_actions=n_actions,
                   n_goals=n_goals,
@@ -102,6 +106,7 @@ else:
                   k_future=k_future,
                   env=dc(env))
 
+    total_success_rate = []
     for epoch in range(MAX_EPOCHS):
         start_time = time.time()
         for cycle in range(MAX_CYCLES):
@@ -159,27 +164,28 @@ else:
                 actor_loss, critic_loss = agent.train()
             agent.update_networks()
 
-        # if MPI.COMM_WORLD.rank == 0:
-        ram = psutil.virtual_memory()
-        succes_rate, running_reward, episode_reward = eval_agent()
-        print(f"Epoch:{epoch}| "
-              f"Running_reward:{running_reward[-1]:.3f}| "
-              f"EP_reward:{episode_reward:.3f}| "
-              f"Memory_length:{len(agent.memory)}| "
-              f"Duration:{time.time() - start_time:3.3f}| "
-              f"Actor_Loss:{actor_loss:3.3f}| "
-              f"Critic_Loss:{critic_loss:3.3f}| "
-              f"Success rate:{succes_rate:.3f}| "
-              f"{to_gb(ram.used):.1f}/{to_gb(ram.total):.1f} GB RAM")
+        if MPI.COMM_WORLD.Get_rank() == 0:
+            ram = psutil.virtual_memory()
+            succes_rate, running_reward, episode_reward = eval_agent()
+            total_success_rate.append(succes_rate)
+            print(f"Epoch:{epoch}| "
+                  f"Running_reward:{running_reward[-1]:.3f}| "
+                  f"EP_reward:{episode_reward:.3f}| "
+                  f"Memory_length:{len(agent.memory)}| "
+                  f"Duration:{time.time() - start_time:3.3f}| "
+                  f"Actor_Loss:{actor_loss:3.3f}| "
+                  f"Critic_Loss:{critic_loss:3.3f}| "
+                  f"Success rate:{succes_rate:.3f}| "
+                  f"{to_gb(ram.used):.1f}/{to_gb(ram.total):.1f} GB RAM")
+        agent.save_weights()
 
-    # agent.save_weights()
     # player = Play(env, agent)
     # player.evaluate()
     #
-    # plt.figure()
+    plt.figure()
     # plt.subplot(311)
-    # plt.plot(np.arange(0, MAX_EPISODES), global_running_r)
-    # plt.title("Reward")
+    plt.plot(np.arange(0, MAX_EPOCHS), total_success_rate)
+    plt.title("Reward")
     #
     # plt.subplot(312)
     # plt.plot(np.arange(0, MAX_EPISODES), total_ac_loss)

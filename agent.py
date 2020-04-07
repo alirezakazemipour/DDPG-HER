@@ -68,8 +68,8 @@ class Agent:
     #     self.random_process.reset_states()
 
     def store(self, mini_batch):
-        for episode_dict in mini_batch:
-            self.memory.add(episode_dict)
+        # for episode_dict in mini_batch:
+        self.memory.add(mini_batch)
 
     def init_target_networks(self):
         self.hard_update_networks(self.actor, self.actor_target)
@@ -159,7 +159,6 @@ def _get_flat_params_or_grads(network, mode='params'):
 
 
 def _set_flat_params_or_grads(network, flat_params, mode='params'):
-
     attr = 'data' if mode == 'params' else 'grad'
     pointer = 0
     for param in network.parameters():
