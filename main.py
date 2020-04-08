@@ -14,7 +14,7 @@ import torch
 
 ENV_NAME = "FetchPickAndPlace-v1"
 INTRO = False
-MAX_EPOCHS = 200
+MAX_EPOCHS = 50
 MAX_CYCLES = 50
 num_updates = 40
 MAX_EPISODES = 16 // os.cpu_count()
@@ -33,8 +33,11 @@ n_goals = test_env.observation_space.spaces["desired_goal"].shape[0]
 action_bounds = [test_env.action_space.low[0], test_env.action_space.high[0]]
 to_gb = lambda in_bytes: in_bytes / 1024 / 1024 / 1024
 
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+os.environ['IN_MPI'] = '1'
 
-def eval_agent():
+def eval_agent(env, agent):
     total_success_rate = []
     running_reward = []
     for ep in range(10):
@@ -54,7 +57,7 @@ def eval_agent():
         episode_reward = 0
         while not done:
             with torch.no_grad():
-                action = agent.choose_action(s, g)
+                action = agent.choose_action(s, g, train_mode=False)
             observation_new, reward, done, info = env.step(action)
             s = observation_new['observation']
             g = observation_new['desired_goal']
@@ -74,7 +77,8 @@ def eval_agent():
 if INTRO:
     print(f"state_shape:{state_shape}\n"
           f"number of actions:{n_actions}\n"
-          f"action boundaries:{action_bounds}")
+          f"action boundaries:{action_bounds}\n"
+          f"max timesteps:{test_env._max_episode_steps}")
     for _ in range(3):
         done = False
         test_env.reset()
@@ -166,7 +170,7 @@ else:
 
         # if MPI.COMM_WORLD.Get_rank() == 0:
         ram = psutil.virtual_memory()
-        succes_rate, running_reward, episode_reward = eval_agent()
+        succes_rate, running_reward, episode_reward = eval_agent(env, agent)
         total_success_rate.append(succes_rate)
         print(f"Epoch:{epoch}| "
               f"Running_reward:{running_reward[-1]:.3f}| "

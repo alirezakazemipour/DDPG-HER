@@ -69,4 +69,4 @@ class Normalizer:
     def normalize(self, v, clip_range=None):
         if clip_range is None:
             clip_range = self.default_clip_range
-        return np.clip((v - self.mean) / (self.std), -clip_range, clip_range)
+        return np.clip((v - self.mean) / self.std, -clip_range, clip_range)

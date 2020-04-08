@@ -6,14 +6,6 @@ import random
 class Memory:
     def __init__(self, capacity, k_future, env):
         self.capacity = capacity
-        # self.memory = {"state": [],
-        #                "action": [],
-        #                "info": [],
-        #                "achieved_goal": [],
-        #                "desired_goal": [],
-        #                "next_state": [],
-        #                "next_achieved_goal": []
-        #                }
         self.memory = []
         self.memory_counter = 0
         self.memory_length = 0
@@ -22,49 +14,47 @@ class Memory:
         self.future_p = 1 - (1. / (1 + k_future))
 
     def sample(self, batch_size):
-        rollout_indices = np.random.randint(0, len(self.memory), batch_size)
-        ep_indices = np.random.randint(0, 2, batch_size)
-        time_indices = np.random.randint(0, len(self.memory[0][0]["state"]), batch_size)
+
+        ep_indices = np.random.randint(0, len(self.memory), batch_size)
+        time_indices = np.random.randint(0, len(self.memory[0]["state"]), batch_size)
         p = np.random.uniform(size=batch_size)
         her_indices = np.where(p < self.future_p)
         regular_indices = np.where(p >= self.future_p)
 
-        future_offset = np.random.uniform(size=batch_size) * (len(self.memory[0][0]["state"]) - time_indices)
+        future_offset = np.random.uniform(size=batch_size) * (len(self.memory[0]["state"]) - time_indices)
         future_offset = future_offset.astype(int)
 
-        her_rollouts = rollout_indices[her_indices]
         her_episodes = ep_indices[her_indices]
         her_timesteps = time_indices[her_indices]
-        her_f_timesteps = (time_indices + future_offset)[her_indices]
+        her_f_timesteps = (time_indices[her_indices] + future_offset[her_indices])
 
         states = []
         actions = []
         rewards = []
         next_states = []
         goals = []
-        for rollout, ep_idx, time_idx, f_offset in zip(her_rollouts, her_episodes, her_timesteps, her_f_timesteps):
-            desired_goal = self.memory[rollout][ep_idx]["achieved_goal"][f_offset].copy()
-            reward = self.env.compute_reward(self.memory[rollout][ep_idx]["next_achieved_goal"][time_idx], desired_goal,
+        for ep_idx, time_idx, f_offset in zip(her_episodes, her_timesteps, her_f_timesteps):
+            desired_goal = dc(self.memory[ep_idx]["achieved_goal"][f_offset])
+            reward = self.env.compute_reward(self.memory[ep_idx]["next_achieved_goal"][time_idx], desired_goal,
                                              None)
 
-            states.append(self.memory[rollout][ep_idx]["state"][time_idx].copy())
-            actions.append(self.memory[rollout][ep_idx]["action"][time_idx].copy())
+            states.append(dc(self.memory[ep_idx]["state"][time_idx]))
+            actions.append(dc(self.memory[ep_idx]["action"][time_idx]))
             rewards.append(reward)
-            next_states.append(self.memory[rollout][ep_idx]["next_state"][time_idx].copy())
+            next_states.append(dc(self.memory[ep_idx]["next_state"][time_idx]))
             goals.append(desired_goal)
 
-        reg_rollouts = rollout_indices[regular_indices]
         reg_episodes = ep_indices[regular_indices]
         reg_timesteps = time_indices[regular_indices]
-        for rollout, ep_idx, time_idx in zip(reg_rollouts, reg_episodes, reg_timesteps):
-            reward = self.env.compute_reward(self.memory[rollout][ep_idx]["next_achieved_goal"][time_idx],
-                                             self.memory[rollout][ep_idx]["desired_goal"][time_idx], None)
+        for ep_idx, time_idx in zip(reg_episodes, reg_timesteps):
+            reward = self.env.compute_reward(self.memory[ep_idx]["next_achieved_goal"][time_idx],
+                                             self.memory[ep_idx]["desired_goal"][time_idx], None)
 
-            states.append(self.memory[rollout][ep_idx]["state"][time_idx].copy())
-            actions.append(self.memory[rollout][ep_idx]["action"][time_idx].copy())
+            states.append(dc(self.memory[ep_idx]["state"][time_idx]))
+            actions.append(dc(self.memory[ep_idx]["action"][time_idx]))
             rewards.append(reward)
-            next_states.append(self.memory[rollout][ep_idx]["next_state"][time_idx].copy())
-            goals.append(self.memory[rollout][ep_idx]["desired_goal"][time_idx].copy())
+            next_states.append(dc(self.memory[ep_idx]["next_state"][time_idx]))
+            goals.append(dc(self.memory[ep_idx]["desired_goal"][time_idx]))
 
         return self.clip_obs(np.vstack(states)), np.vstack(actions), np.vstack(rewards), \
                self.clip_obs(np.vstack(next_states)), self.clip_obs(np.vstack(goals))
@@ -76,7 +66,7 @@ class Memory:
         assert len(self.memory) <= self.capacity
 
     def __len__(self):
-        return len(self.memory) * len(self.memory[0])
+        return len(self.memory)
 
     @staticmethod
     def clip_obs(x):
@@ -84,8 +74,7 @@ class Memory:
 
     def sample_for_normalization(self, batch):
         size = len(batch[0]["state"])
-        rollout_indices = np.random.randint(0, len(batch), size)
-        ep_indices = np.random.randint(0, 2, size)
+        ep_indices = np.random.randint(0, len(batch), size)
         time_indices = np.random.randint(0, len(batch[0]["state"]), size)
         p = np.random.uniform(size=size)
         her_indices = np.where(p < self.future_p)
@@ -94,26 +83,21 @@ class Memory:
         future_offset = np.random.uniform(size=size) * (len(batch[0]["state"]) - time_indices)
         future_offset = future_offset.astype(int)
 
-        her_rollouts = rollout_indices[her_indices]
         her_episodes = ep_indices[her_indices]
         her_timesteps = time_indices[her_indices]
-        her_f_timesteps = (time_indices + future_offset)[her_indices]
+        her_f_timesteps = time_indices[her_indices] + future_offset[her_indices]
 
         states = []
-        actions = []
-        rewards = []
-        next_states = []
         goals = []
-        for rollout, ep_idx, time_idx, f_offset in zip(her_rollouts, her_episodes, her_timesteps, her_f_timesteps):
-            desired_goal = self.memory[rollout][ep_idx]["achieved_goal"][f_offset].copy()
-            states.append(self.memory[rollout][ep_idx]["state"][time_idx].copy())
+        for ep_idx, time_idx, f_offset in zip(her_episodes, her_timesteps, her_f_timesteps):
+            desired_goal = dc(batch[ep_idx]["achieved_goal"][f_offset])
+            states.append(dc(batch[ep_idx]["state"][time_idx]))
             goals.append(desired_goal)
 
-        reg_rollouts = rollout_indices[regular_indices]
         reg_episodes = ep_indices[regular_indices]
         reg_timesteps = time_indices[regular_indices]
-        for rollout, ep_idx, time_idx in zip(reg_rollouts, reg_episodes, reg_timesteps):
-            states.append(self.memory[rollout][ep_idx]["state"][time_idx].copy())
-            goals.append(self.memory[rollout][ep_idx]["desired_goal"][time_idx].copy())
+        for ep_idx, time_idx in zip(reg_episodes, reg_timesteps):
+            states.append(dc(batch[ep_idx]["state"][time_idx]))
+            goals.append(dc(batch[ep_idx]["desired_goal"][time_idx]))
 
         return self.clip_obs(np.vstack(states)), self.clip_obs(np.vstack(goals))

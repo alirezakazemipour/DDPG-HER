@@ -47,10 +47,10 @@ class Agent:
 
         self.critic_loss_fn = torch.nn.MSELoss()
 
-        self.state_normalizer = Normalizer(self.n_states, 5)
+        self.state_normalizer = Normalizer(self.n_states[0], 5)
         self.goal_normalizer = Normalizer(self.n_goals, 5)
 
-    def choose_action(self, state, goal):
+    def choose_action(self, state, goal, train_mode=True):
         state = self.state_normalizer.normalize(state)
         goal = self.goal_normalizer.normalize(goal)
         state = np.expand_dims(state, axis=0)
@@ -58,20 +58,21 @@ class Agent:
         goal = np.expand_dims(goal, axis=0)
         goal = from_numpy(goal).float().to(self.device)
 
-        self.actor.eval()
         with torch.no_grad():
             action = self.actor(state, goal)[0].cpu().data.numpy()
-        self.actor.train()
 
-        action += 0.2 * np.random.randn(self.n_actions)
-        action = np.clip(action, self.action_bounds[0], self.action_bounds[1])
+        if train_mode:
+            action += 0.2 * np.random.randn(self.n_actions)
+            action = np.clip(action, self.action_bounds[0], self.action_bounds[1])
 
-        random_actions = np.random.uniform(low=self.action_bounds[0], high=self.action_bounds[1], size=self.n_actions)
-        action += np.random.binomial(1, 0.3, 1)[0] * (random_actions - action)
+            random_actions = np.random.uniform(low=self.action_bounds[0], high=self.action_bounds[1], size=self.n_actions)
+            action += np.random.binomial(1, 0.3, 1)[0] * (random_actions - action)
+
         return action
 
     def store(self, mini_batch):
-        self.memory.add(mini_batch)
+        for batch in mini_batch:
+            self.memory.add(batch)
         self._update_normalizer(mini_batch)
 
     def init_target_networks(self):
@@ -81,7 +82,6 @@ class Agent:
     @staticmethod
     def hard_update_networks(local_model, target_model):
         target_model.load_state_dict(local_model.state_dict())
-        # target_model.eval()
 
     @staticmethod
     def soft_update_networks(local_model, target_model, tau=0.05):
@@ -89,16 +89,12 @@ class Agent:
             t_params.data.copy_(tau * e_params.data + (1 - tau) * t_params.data)
 
     def train(self):
-
-        if len(self.memory) < self.batch_size:
-            return 0, 0
-
         states, actions, rewards, next_states, goals = self.memory.sample(self.batch_size)
 
         states = self.state_normalizer.normalize(states)
         next_states = self.state_normalizer.normalize(next_states)
         goals = self.goal_normalizer.normalize(goals)
-        
+
         states = torch.Tensor(states).to(self.device)
         rewards = torch.Tensor(rewards).to(self.device)
         next_states = torch.Tensor(next_states).to(self.device)
@@ -114,8 +110,8 @@ class Agent:
         critic_loss = self.critic_loss_fn(target_returns.view(self.batch_size, 1), q_eval)
 
         a = self.actor(states, goals)
-        actor_loss = -self.critic(states, goals, a)
-        actor_loss = actor_loss.mean() + a.pow(2).mean()
+        actor_loss = -self.critic(states, goals, a).mean()
+        actor_loss += a.pow(2).mean()
 
         self.actor_optim.zero_grad()
         actor_loss.backward()
