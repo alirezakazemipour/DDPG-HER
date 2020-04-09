@@ -32,7 +32,6 @@ class Actor(nn.Module):
         self.output = nn.Linear(in_features=self.n_hidden3, out_features=self.n_actions)
         # nn.init.xavier_uniform_(self.output.weight)
         # self.output.bias.data.zero_()
-        self.tanh = nn.Tanh()
 
         # self.fc1.weight.data = init_weights_biases(self.fc1.weight.data.size())
         # self.fc1.bias.data = init_weights_biases(self.fc1.bias.data.size())
@@ -49,7 +48,7 @@ class Actor(nn.Module):
         x = F.relu(self.fc1(torch.cat([x, g], dim=-1)))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
-        output = self.tanh(self.output(x))  # TODO add scale of the action
+        output = torch.tanh(self.output(x))  # TODO add scale of the action
 
         return output
 

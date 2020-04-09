@@ -37,19 +37,18 @@ os.environ['OMP_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 os.environ['IN_MPI'] = '1'
 
+
 def eval_agent(env, agent):
     total_success_rate = []
     running_reward = []
     for ep in range(10):
         per_success_rate = []
         env_dict = env.reset()
-        # agent.reset_randomness()
         s = env_dict["observation"]
         ag = env_dict["achieved_goal"]
         g = env_dict["desired_goal"]
         while np.linalg.norm(ag - g) <= 0.05:
             env_dict = env.reset()
-            # agent.reset_randomness()
             s = env_dict["observation"]
             ag = env_dict["achieved_goal"]
             g = env_dict["desired_goal"]
@@ -92,10 +91,10 @@ if INTRO:
             test_env.render()
 else:
     env = gym.make(ENV_NAME)
-    env.seed(MPI.COMM_WORLD.Get_rank())
-    random.seed(MPI.COMM_WORLD.Get_rank())
-    np.random.seed(MPI.COMM_WORLD.Get_rank())
-    torch.manual_seed(MPI.COMM_WORLD.Get_rank())
+    env.seed(123 + MPI.COMM_WORLD.Get_rank())
+    random.seed(123 + MPI.COMM_WORLD.Get_rank())
+    np.random.seed(123 + MPI.COMM_WORLD.Get_rank())
+    torch.manual_seed(123 + MPI.COMM_WORLD.Get_rank())
     agent = Agent(n_states=state_shape,
                   n_actions=n_actions,
                   n_goals=n_goals,
@@ -110,10 +109,10 @@ else:
                   k_future=k_future,
                   env=dc(env))
 
-    total_success_rate = []
-    for epoch in range(MAX_EPOCHS):
+    t_success_rate = []
+    for epoch in range(0, MAX_EPOCHS):
         start_time = time.time()
-        for cycle in range(MAX_CYCLES):
+        for cycle in range(0, MAX_CYCLES):
             mb = []
             for episode in range(MAX_EPISODES):
                 episode_dict = {
@@ -126,17 +125,15 @@ else:
                     "next_achieved_goal": []}
                 done = 0
                 env_dict = env.reset()
-                # agent.reset_randomness()
                 state = env_dict["observation"]
                 achieved_goal = env_dict["achieved_goal"]
                 desired_goal = env_dict["desired_goal"]
                 while np.linalg.norm(achieved_goal - desired_goal) <= 0.05:
                     env_dict = env.reset()
-                    # agent.reset_randomness()
                     state = env_dict["observation"]
                     achieved_goal = env_dict["achieved_goal"]
                     desired_goal = env_dict["desired_goal"]
-                episode_reward = 0
+                # episode_reward = 0
                 step = 0
                 while not done:
                     # env.render()
@@ -158,29 +155,28 @@ else:
                     state = next_state.copy()
                     achieved_goal = next_achieved_goal.copy()
                     desired_goal = next_desired_goal.copy()
-                    episode_reward += reward
+                    # episode_reward += reward
                 # agent.store(dc(episode_dict))
                 mb.append(dc(episode_dict))
 
             agent.store(mb)
-            actor_loss, critic_loss = 0, 0
             for n_update in range(num_updates):
                 actor_loss, critic_loss = agent.train()
             agent.update_networks()
 
-        # if MPI.COMM_WORLD.Get_rank() == 0:
         ram = psutil.virtual_memory()
-        succes_rate, running_reward, episode_reward = eval_agent(env, agent)
-        total_success_rate.append(succes_rate)
-        print(f"Epoch:{epoch}| "
-              f"Running_reward:{running_reward[-1]:.3f}| "
-              f"EP_reward:{episode_reward:.3f}| "
-              f"Memory_length:{len(agent.memory)}| "
-              f"Duration:{time.time() - start_time:3.3f}| "
-              f"Actor_Loss:{actor_loss:3.3f}| "
-              f"Critic_Loss:{critic_loss:3.3f}| "
-              f"Success rate:{succes_rate:.3f}| "
-              f"{to_gb(ram.used):.1f}/{to_gb(ram.total):.1f} GB RAM")
+        success_rate, running_reward, episode_reward = eval_agent(env, agent)
+        t_success_rate.append(success_rate)
+        if MPI.COMM_WORLD.Get_rank() == 0:
+            print(f"Epoch:{epoch}| "
+                  f"Running_reward:{running_reward[-1]:.3f}| "
+                  f"EP_reward:{episode_reward:.3f}| "
+                  f"Memory_length:{len(agent.memory)}| "
+                  f"Duration:{time.time() - start_time:.3f}| "
+                  f"Actor_Loss:{actor_loss:.3f}| "
+                  f"Critic_Loss:{critic_loss:.3f}| "
+                  f"Success rate:{success_rate:.3f}| "
+                  f"{to_gb(ram.used):.1f}/{to_gb(ram.total):.1f} GB RAM")
         agent.save_weights()
 
     # player = Play(env, agent)
@@ -188,7 +184,7 @@ else:
     #
     plt.figure()
     # plt.subplot(311)
-    plt.plot(np.arange(0, MAX_EPOCHS), total_success_rate)
+    plt.plot(np.arange(0, MAX_EPOCHS), t_success_rate)
     plt.title("Reward")
     #
     # plt.subplot(312)

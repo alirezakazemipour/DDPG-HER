@@ -13,10 +13,10 @@ class Agent:
                  k_future,
                  batch_size,
                  action_size=1,
-                 tau=0.001,
-                 actor_lr=1e-4,
+                 tau=0.05,
+                 actor_lr=1e-3,
                  critic_lr=1e-3,
-                 gamma=0.99):
+                 gamma=0.98):
         self.device = device("cpu")
         self.n_states = n_states
         self.n_actions = n_actions
@@ -65,7 +65,8 @@ class Agent:
             action += 0.2 * np.random.randn(self.n_actions)
             action = np.clip(action, self.action_bounds[0], self.action_bounds[1])
 
-            random_actions = np.random.uniform(low=self.action_bounds[0], high=self.action_bounds[1], size=self.n_actions)
+            random_actions = np.random.uniform(low=self.action_bounds[0], high=self.action_bounds[1],
+                                               size=self.n_actions)
             action += np.random.binomial(1, 0.3, 1)[0] * (random_actions - action)
 
         return action
@@ -107,7 +108,7 @@ class Agent:
             target_returns = torch.clamp(target_returns, -1 / (1 - self.gamma), 0).detach()
 
         q_eval = self.critic(states, goals, actions)
-        critic_loss = self.critic_loss_fn(target_returns.view(self.batch_size, 1), q_eval)
+        critic_loss = self.critic_loss_fn(target_returns, q_eval)
 
         a = self.actor(states, goals)
         actor_loss = -self.critic(states, goals, a).mean()
@@ -123,7 +124,7 @@ class Agent:
         self.sync_grads(self.critic)
         self.critic_optim.step()
 
-        return actor_loss, critic_loss
+        return actor_loss.item(), critic_loss.item()
 
     def save_weights(self):
         torch.save(self.actor.state_dict(), "./actor_weights.pth")

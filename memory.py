@@ -30,13 +30,13 @@ class Memory:
                                                 dtype=np.float64)}
         batch_indices = np.arange(0, batch_size)
         for batch_idx, ep_idx, time_idx in zip(batch_indices, ep_indices, time_indices):
-            transition["states"][batch_idx] = self.memory[ep_idx]["state"][time_idx]
-            transition["actions"][batch_idx] = self.memory[ep_idx]["action"][time_idx]
+            transition["states"][batch_idx] = dc(self.memory[ep_idx]["state"][time_idx])
+            transition["actions"][batch_idx] = dc(self.memory[ep_idx]["action"][time_idx])
             # rewards would be calculated later!
-            transition["next_states"][batch_idx] = self.memory[ep_idx]["next_state"][time_idx]
-            transition["achieved_goals"][batch_idx] = self.memory[ep_idx]["achieved_goal"][time_idx]
-            transition["desired_goals"][batch_idx] = self.memory[ep_idx]["desired_goal"][time_idx]
-            transition["next_achieved_goals"][batch_idx] = self.memory[ep_idx]["next_achieved_goal"][time_idx]
+            transition["next_states"][batch_idx] = dc(self.memory[ep_idx]["next_state"][time_idx])
+            transition["achieved_goals"][batch_idx] = dc(self.memory[ep_idx]["achieved_goal"][time_idx])
+            transition["desired_goals"][batch_idx] = dc(self.memory[ep_idx]["desired_goal"][time_idx])
+            transition["next_achieved_goals"][batch_idx] = dc(self.memory[ep_idx]["next_achieved_goal"][time_idx])
 
         her_indices = np.where(np.random.uniform(size=batch_size) < self.future_p)
         future_offset = np.random.uniform(size=batch_size) * (len(self.memory[0]["state"]) - time_indices)
@@ -47,7 +47,7 @@ class Memory:
             (ep_indices[her_indices].shape[0], self.memory[0]["next_achieved_goal"][0].shape[0]), dtype=np.float64)
         future_indices = np.arange(0, ep_indices[her_indices].shape[0])
         for f_idx, ep_idx, time_idx in zip(future_indices, ep_indices[her_indices], future_t):
-            future_achieved_goals[f_idx] = self.memory[ep_idx]["achieved_goal"][time_idx]
+            future_achieved_goals[f_idx] = dc(self.memory[ep_idx]["achieved_goal"][time_idx])
         transition['desired_goals'][her_indices] = future_achieved_goals
 
         transition['rewards'] = np.expand_dims(self.env.compute_reward(transition['next_achieved_goals'],
@@ -81,10 +81,10 @@ class Memory:
                       "desired_goals": np.empty((size, batch[0]["desired_goal"][0].shape[0]), dtype=np.float64)}
         batch_indices = np.arange(0, size)
         for batch_idx, ep_idx, time_idx in zip(batch_indices, ep_indices, time_indices):
-            transition["states"][batch_idx] = batch[ep_idx]["state"][time_idx]
-            transition["achieved_goals"][batch_idx] = batch[ep_idx]["achieved_goal"][time_idx]
-            transition["desired_goals"][batch_idx] = batch[ep_idx]["desired_goal"][time_idx]
-            transition["next_achieved_goals"][batch_idx] = batch[ep_idx]["next_achieved_goal"][time_idx]
+            transition["states"][batch_idx] = dc(batch[ep_idx]["state"][time_idx])
+            transition["achieved_goals"][batch_idx] = dc(batch[ep_idx]["achieved_goal"][time_idx])
+            transition["desired_goals"][batch_idx] = dc(batch[ep_idx]["desired_goal"][time_idx])
+            transition["next_achieved_goals"][batch_idx] = dc(batch[ep_idx]["next_achieved_goal"][time_idx])
 
         her_indices = np.where(np.random.uniform(size=size) < self.future_p)
         future_offset = np.random.uniform(size=size) * (len(batch[0]["state"]) - time_indices)
@@ -95,7 +95,7 @@ class Memory:
             (ep_indices[her_indices].shape[0], batch[0]["next_achieved_goal"][0].shape[0]), dtype=np.float64)
         future_indices = np.arange(0, ep_indices[her_indices].shape[0])
         for f_idx, ep_idx, time_idx in zip(future_indices, ep_indices[her_indices], future_t):
-            future_achieved_goals[f_idx] = batch[ep_idx]["achieved_goal"][time_idx]
+            future_achieved_goals[f_idx] = dc(batch[ep_idx]["achieved_goal"][time_idx])
         transition['desired_goals'][her_indices] = future_achieved_goals
 
         return self.clip_obs(np.vstack(transition["states"])), self.clip_obs(np.vstack(transition["desired_goals"]))
