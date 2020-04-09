@@ -18,7 +18,7 @@ MAX_EPOCHS = 50
 MAX_CYCLES = 50
 num_updates = 40
 MAX_EPISODES = 16 // os.cpu_count()
-memory_size = 9000 // 4  # 7e+5 // os.cpu_count()
+memory_size = 9000
 batch_size = 256
 actor_lr = 1e-3
 critic_lr = 1e-3
@@ -40,37 +40,36 @@ os.environ['IN_MPI'] = '1'
 
 def eval_agent(env, agent):
     total_success_rate = []
-    running_reward = []
+    running_r = []
     for ep in range(10):
         per_success_rate = []
-        env_dict = env.reset()
-        s = env_dict["observation"]
-        ag = env_dict["achieved_goal"]
-        g = env_dict["desired_goal"]
+        env_dictionary = env.reset()
+        s = env_dictionary["observation"]
+        ag = env_dictionary["achieved_goal"]
+        g = env_dictionary["desired_goal"]
         while np.linalg.norm(ag - g) <= 0.05:
-            env_dict = env.reset()
-            s = env_dict["observation"]
-            ag = env_dict["achieved_goal"]
-            g = env_dict["desired_goal"]
-        done = False
-        episode_reward = 0
-        while not done:
+            env_dictionary = env.reset()
+            s = env_dictionary["observation"]
+            ag = env_dictionary["achieved_goal"]
+            g = env_dictionary["desired_goal"]
+        ep_r = 0
+        for t in range(50):
             with torch.no_grad():
-                action = agent.choose_action(s, g, train_mode=False)
-            observation_new, reward, done, info = env.step(action)
+                a = agent.choose_action(s, g, train_mode=False)
+            observation_new, r, _, info_ = env.step(a)
             s = observation_new['observation']
             g = observation_new['desired_goal']
-            per_success_rate.append(info['is_success'])
-            episode_reward += reward
+            per_success_rate.append(info_['is_success'])
+            ep_r += r
         total_success_rate.append(per_success_rate)
         if ep == 0:
-            running_reward.append(episode_reward)
+            running_r.append(ep_r)
         else:
-            running_reward.append(running_reward[-1] * 0.99 + 0.01 * episode_reward)
+            running_r.append(running_r[-1] * 0.99 + 0.01 * ep_r)
     total_success_rate = np.array(total_success_rate)
     local_success_rate = np.mean(total_success_rate[:, -1])
     global_success_rate = MPI.COMM_WORLD.allreduce(local_success_rate, op=MPI.SUM)
-    return global_success_rate / MPI.COMM_WORLD.Get_size(), running_reward, episode_reward
+    return global_success_rate / MPI.COMM_WORLD.Get_size(), running_r, ep_r
 
 
 if INTRO:
@@ -123,7 +122,6 @@ else:
                     "desired_goal": [],
                     "next_state": [],
                     "next_achieved_goal": []}
-                done = 0
                 env_dict = env.reset()
                 state = env_dict["observation"]
                 achieved_goal = env_dict["achieved_goal"]
@@ -134,10 +132,7 @@ else:
                     achieved_goal = env_dict["achieved_goal"]
                     desired_goal = env_dict["desired_goal"]
                 # episode_reward = 0
-                step = 0
-                while not done:
-                    # env.render()
-                    step += 1
+                for t in range(50):
                     action = agent.choose_action(state, desired_goal)
                     next_env_dict, reward, done, info = env.step(action)
 
