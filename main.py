@@ -18,7 +18,7 @@ MAX_EPOCHS = 50
 MAX_CYCLES = 50
 num_updates = 40
 MAX_EPISODES = 16 // os.cpu_count()
-memory_size = 9000 // 2  # 7e+5 // os.cpu_count()
+memory_size = 9000 // 4  # 7e+5 // os.cpu_count()
 batch_size = 256
 actor_lr = 1e-3
 critic_lr = 1e-3
@@ -91,10 +91,10 @@ if INTRO:
             test_env.render()
 else:
     env = gym.make(ENV_NAME)
-    env.seed(123 + MPI.COMM_WORLD.Get_rank())
-    random.seed(123 + MPI.COMM_WORLD.Get_rank())
-    np.random.seed(123 + MPI.COMM_WORLD.Get_rank())
-    torch.manual_seed(123 + MPI.COMM_WORLD.Get_rank())
+    env.seed(MPI.COMM_WORLD.Get_rank())
+    random.seed(MPI.COMM_WORLD.Get_rank())
+    np.random.seed(MPI.COMM_WORLD.Get_rank())
+    torch.manual_seed(MPI.COMM_WORLD.Get_rank())
     agent = Agent(n_states=state_shape,
                   n_actions=n_actions,
                   n_goals=n_goals,

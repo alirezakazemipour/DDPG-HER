@@ -40,12 +40,11 @@ class Actor(nn.Module):
         # self.fc3.weight.data = init_weights_biases(self.fc3.weight.data.size())
         # self.fc3.bias.data = init_weights_biases(self.fc3.bias.data.size())
 
-    #         #
     # self.output.weight.data.uniform_(-self.initial_w, self.initial_w)
     # self.output.bias.data.uniform_(-self.initial_w, self.initial_w)
 
-    def forward(self, x, g):
-        x = F.relu(self.fc1(torch.cat([x, g], dim=-1)))
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
         output = torch.tanh(self.output(x))  # TODO add scale of the action
@@ -87,8 +86,8 @@ class Critic(nn.Module):
         # self.output.weight.data.uniform_(-self.initial_w, self.initial_w)
         # self.output.bias.data.uniform_(-self.initial_w, self.initial_w)
 
-    def forward(self, x, g, a):
-        x = F.relu(self.fc1(torch.cat([x, g, a], dim=-1)))
+    def forward(self, x, a):
+        x = F.relu(self.fc1(torch.cat([x, a], dim=-1)))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
         output = self.output(x)

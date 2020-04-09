@@ -17,44 +17,47 @@ class Memory:
 
         ep_indices = np.random.randint(0, len(self.memory), batch_size)
         time_indices = np.random.randint(0, len(self.memory[0]["state"]), batch_size)
+        p = np.random.uniform(size=batch_size)
+        her_indices = np.where(p < self.future_p)
+        regular_indices = np.where(p >= self.future_p)
 
-        transition = {"states": np.empty((batch_size, self.memory[0]["state"][0].shape[0]), dtype=np.float64),
-                      "actions": np.empty((batch_size, self.memory[0]["action"][0].shape[0]), dtype=np.float64),
-                      "rewards": np.empty((batch_size, 1), dtype=np.float64),
-                      "achieved_goals": np.empty((batch_size, self.memory[0]["achieved_goal"][0].shape[0]),
-                                                 dtype=np.float64),
-                      "next_states": np.empty((batch_size, self.memory[0]["next_state"][0].shape[0]), dtype=np.float64),
-                      "next_achieved_goals": np.empty((batch_size, self.memory[0]["next_achieved_goal"][0].shape[0]),
-                                                      dtype=np.float64),
-                      "desired_goals": np.empty((batch_size, self.memory[0]["desired_goal"][0].shape[0]),
-                                                dtype=np.float64)}
-        batch_indices = np.arange(0, batch_size)
-        for batch_idx, ep_idx, time_idx in zip(batch_indices, ep_indices, time_indices):
-            transition["states"][batch_idx] = dc(self.memory[ep_idx]["state"][time_idx])
-            transition["actions"][batch_idx] = dc(self.memory[ep_idx]["action"][time_idx])
-            # rewards would be calculated later!
-            transition["next_states"][batch_idx] = dc(self.memory[ep_idx]["next_state"][time_idx])
-            transition["achieved_goals"][batch_idx] = dc(self.memory[ep_idx]["achieved_goal"][time_idx])
-            transition["desired_goals"][batch_idx] = dc(self.memory[ep_idx]["desired_goal"][time_idx])
-            transition["next_achieved_goals"][batch_idx] = dc(self.memory[ep_idx]["next_achieved_goal"][time_idx])
-
-        her_indices = np.where(np.random.uniform(size=batch_size) < self.future_p)
         future_offset = np.random.uniform(size=batch_size) * (len(self.memory[0]["state"]) - time_indices)
         future_offset = future_offset.astype(int)
-        future_t = (time_indices + future_offset)[her_indices]
 
-        future_achieved_goals = np.empty(
-            (ep_indices[her_indices].shape[0], self.memory[0]["next_achieved_goal"][0].shape[0]), dtype=np.float64)
-        future_indices = np.arange(0, ep_indices[her_indices].shape[0])
-        for f_idx, ep_idx, time_idx in zip(future_indices, ep_indices[her_indices], future_t):
-            future_achieved_goals[f_idx] = dc(self.memory[ep_idx]["achieved_goal"][time_idx])
-        transition['desired_goals'][her_indices] = future_achieved_goals
+        her_episodes = ep_indices[her_indices]
+        her_timesteps = time_indices[her_indices]
+        her_f_timesteps = (time_indices[her_indices] + future_offset[her_indices])
 
-        transition['rewards'] = np.expand_dims(self.env.compute_reward(transition['next_achieved_goals'],
-                                                                       transition['desired_goals'], None), 1)
+        states = []
+        actions = []
+        rewards = []
+        next_states = []
+        goals = []
+        for ep_idx, time_idx, f_offset in zip(her_episodes, her_timesteps, her_f_timesteps):
+            desired_goal = dc(self.memory[ep_idx]["achieved_goal"][f_offset])
+            reward = self.env.compute_reward(self.memory[ep_idx]["next_achieved_goal"][time_idx], desired_goal,
+                                             None)
 
-        return self.clip_obs(transition["states"]), transition["actions"], transition["rewards"], \
-               self.clip_obs(transition["next_states"]), self.clip_obs(transition["desired_goals"])
+            states.append(dc(self.memory[ep_idx]["state"][time_idx]))
+            actions.append(dc(self.memory[ep_idx]["action"][time_idx]))
+            rewards.append(reward)
+            next_states.append(dc(self.memory[ep_idx]["next_state"][time_idx]))
+            goals.append(desired_goal)
+
+        reg_episodes = ep_indices[regular_indices]
+        reg_timesteps = time_indices[regular_indices]
+        for ep_idx, time_idx in zip(reg_episodes, reg_timesteps):
+            reward = self.env.compute_reward(self.memory[ep_idx]["next_achieved_goal"][time_idx],
+                                             self.memory[ep_idx]["desired_goal"][time_idx], None)
+
+            states.append(dc(self.memory[ep_idx]["state"][time_idx]))
+            actions.append(dc(self.memory[ep_idx]["action"][time_idx]))
+            rewards.append(reward)
+            next_states.append(dc(self.memory[ep_idx]["next_state"][time_idx]))
+            goals.append(dc(self.memory[ep_idx]["desired_goal"][time_idx]))
+
+        return self.clip_obs(np.vstack(states)), np.vstack(actions), np.vstack(rewards), \
+               self.clip_obs(np.vstack(next_states)), self.clip_obs(np.vstack(goals))
 
     def add(self, transition):
         self.memory.append(transition)
@@ -73,29 +76,29 @@ class Memory:
         size = len(batch[0]["state"])
         ep_indices = np.random.randint(0, len(batch), size)
         time_indices = np.random.randint(0, len(batch[0]["state"]), size)
+        p = np.random.uniform(size=size)
+        her_indices = np.where(p < self.future_p)
+        regular_indices = np.where(p >= self.future_p)
 
-        transition = {"states": np.empty((size, batch[0]["state"][0].shape[0]), dtype=np.float64),
-                      "achieved_goals": np.empty((size, batch[0]["achieved_goal"][0].shape[0]), dtype=np.float64),
-                      "next_achieved_goals": np.empty((size, batch[0]["next_achieved_goal"][0].shape[0]),
-                                                      dtype=np.float64),
-                      "desired_goals": np.empty((size, batch[0]["desired_goal"][0].shape[0]), dtype=np.float64)}
-        batch_indices = np.arange(0, size)
-        for batch_idx, ep_idx, time_idx in zip(batch_indices, ep_indices, time_indices):
-            transition["states"][batch_idx] = dc(batch[ep_idx]["state"][time_idx])
-            transition["achieved_goals"][batch_idx] = dc(batch[ep_idx]["achieved_goal"][time_idx])
-            transition["desired_goals"][batch_idx] = dc(batch[ep_idx]["desired_goal"][time_idx])
-            transition["next_achieved_goals"][batch_idx] = dc(batch[ep_idx]["next_achieved_goal"][time_idx])
-
-        her_indices = np.where(np.random.uniform(size=size) < self.future_p)
         future_offset = np.random.uniform(size=size) * (len(batch[0]["state"]) - time_indices)
         future_offset = future_offset.astype(int)
-        future_t = (time_indices + future_offset)[her_indices]
 
-        future_achieved_goals = np.empty(
-            (ep_indices[her_indices].shape[0], batch[0]["next_achieved_goal"][0].shape[0]), dtype=np.float64)
-        future_indices = np.arange(0, ep_indices[her_indices].shape[0])
-        for f_idx, ep_idx, time_idx in zip(future_indices, ep_indices[her_indices], future_t):
-            future_achieved_goals[f_idx] = dc(batch[ep_idx]["achieved_goal"][time_idx])
-        transition['desired_goals'][her_indices] = future_achieved_goals
+        her_episodes = ep_indices[her_indices]
+        her_timesteps = time_indices[her_indices]
+        her_f_timesteps = time_indices[her_indices] + future_offset[her_indices]
 
-        return self.clip_obs(np.vstack(transition["states"])), self.clip_obs(np.vstack(transition["desired_goals"]))
+        states = []
+        goals = []
+        for ep_idx, time_idx, f_offset in zip(her_episodes, her_timesteps, her_f_timesteps):
+            desired_goal = dc(batch[ep_idx]["achieved_goal"][f_offset])
+            states.append(dc(batch[ep_idx]["state"][time_idx]))
+            goals.append(desired_goal)
+
+        reg_episodes = ep_indices[regular_indices]
+        reg_timesteps = time_indices[regular_indices]
+        for ep_idx, time_idx in zip(reg_episodes, reg_timesteps):
+            states.append(dc(batch[ep_idx]["state"][time_idx]))
+            goals.append(dc(batch[ep_idx]["desired_goal"][time_idx]))
+
+        return self.clip_obs(np.vstack(states)), self.clip_obs(np.vstack(goals))
+

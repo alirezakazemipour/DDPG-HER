@@ -54,12 +54,12 @@ class Agent:
         state = self.state_normalizer.normalize(state)
         goal = self.goal_normalizer.normalize(goal)
         state = np.expand_dims(state, axis=0)
-        state = from_numpy(state).float().to(self.device)
         goal = np.expand_dims(goal, axis=0)
-        goal = from_numpy(goal).float().to(self.device)
 
         with torch.no_grad():
-            action = self.actor(state, goal)[0].cpu().data.numpy()
+            x = np.concatenate([state, goal], axis=1)
+            x = from_numpy(x).float().to(self.device)
+            action = self.actor(x)[0].cpu().data.numpy()
 
         if train_mode:
             action += 0.2 * np.random.randn(self.n_actions)
@@ -95,23 +95,24 @@ class Agent:
         states = self.state_normalizer.normalize(states)
         next_states = self.state_normalizer.normalize(next_states)
         goals = self.goal_normalizer.normalize(goals)
+        inputs = np.concatenate([states, goals], axis=1)
+        next_inputs = np.concatenate([next_states, goals], axis=1)
 
-        states = torch.Tensor(states).to(self.device)
+        inputs = torch.Tensor(inputs).to(self.device)
         rewards = torch.Tensor(rewards).to(self.device)
-        next_states = torch.Tensor(next_states).to(self.device)
+        next_inputs = torch.Tensor(next_inputs).to(self.device)
         actions = torch.Tensor(actions).to(self.device)
-        goals = torch.Tensor(goals).to(self.device)
 
         with torch.no_grad():
-            target_q = self.critic_target(next_states, goals, self.actor_target(next_states, goals))
-            target_returns = rewards + self.gamma * target_q
-            target_returns = torch.clamp(target_returns, -1 / (1 - self.gamma), 0).detach()
+            target_q = self.critic_target(next_inputs, self.actor_target(next_inputs))
+            target_returns = rewards + self.gamma * target_q.detach()
+            target_returns = torch.clamp(target_returns, -1 / (1 - self.gamma), 0)
 
-        q_eval = self.critic(states, goals, actions)
+        q_eval = self.critic(inputs, actions)
         critic_loss = self.critic_loss_fn(target_returns, q_eval)
 
-        a = self.actor(states, goals)
-        actor_loss = -self.critic(states, goals, a).mean()
+        a = self.actor(inputs)
+        actor_loss = -self.critic(inputs, a).mean()
         actor_loss += a.pow(2).mean()
 
         self.actor_optim.zero_grad()
