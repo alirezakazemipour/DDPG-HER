@@ -17,7 +17,7 @@ INTRO = False
 MAX_EPOCHS = 50
 MAX_CYCLES = 50
 num_updates = 40
-MAX_EPISODES = 16 // os.cpu_count()
+MAX_EPISODES = 2
 memory_size = 7e+5 // 50
 batch_size = 256
 actor_lr = 1e-3
@@ -180,13 +180,14 @@ else:
                   f"{to_gb(ram.used):.1f}/{to_gb(ram.total):.1f} GB RAM")
         agent.save_weights()
 
-    # player = Play(env, agent)
-    # player.evaluate()
-    #
+    player = Play(env, agent)
+    player.evaluate()
+
     plt.figure()
-    # plt.subplot(311)
     plt.plot(np.arange(0, MAX_EPOCHS), t_success_rate)
-    plt.title("Reward")
+    plt.grid()
+    plt.title("Success rate")
+    plt.savefig("success_rate.png")
     #
     # plt.subplot(312)
     # plt.plot(np.arange(0, MAX_EPISODES), total_ac_loss)

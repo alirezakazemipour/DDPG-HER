@@ -126,12 +126,25 @@ class Agent:
         return actor_loss.item(), critic_loss.item()
 
     def save_weights(self):
-        torch.save(self.actor.state_dict(), "./actor_weights.pth")
-        torch.save(self.critic.state_dict(), "./critic_weights.pth")
+        torch.save({"actor_state_dict": self.actor.state_dict(),
+                    "state_normalizer_mean": self.state_normalizer.mean,
+                    "state_normalizer_std": self.state_normalizer.std,
+                    "goal_normalizer_mean": self.goal_normalizer.mean,
+                    "goal_normalizer_std": self.goal_normalizer.std}, "parameters.pth")
 
     def load_weights(self):
-        self.actor.load_state_dict(torch.load("./actor_weights.pth"))
-        # self.critic.load_state_dict(torch.load("./critic_weights.pth"))
+
+        checkpoint = torch.load("parameters.pth")
+        actor_state_dict = checkpoint["actor_state_dict"]
+        self.actor.load_state_dict(actor_state_dict)
+        state_normalizer_mean = checkpoint["state_normalizer_mean"]
+        self.state_normalizer.mean = state_normalizer_mean
+        state_normalizer_std = checkpoint["state_normalizer_std"]
+        self.state_normalizer.std = state_normalizer_std
+        goal_normalizer_mean = checkpoint["goal_normalizer_mean"]
+        self.goal_normalizer.mean = goal_normalizer_mean
+        goal_normalizer_std = checkpoint["goal_normalizer_std"]
+        self.goal_normalizer.std = goal_normalizer_std
 
     def set_to_eval_mode(self):
         self.actor.eval()
