@@ -33,9 +33,9 @@ class Play:
                 next_state = next_env_dict["observation"]
                 next_desired_goal = next_env_dict["desired_goal"]
                 episode_reward += r
-                print(f"reward:{r:3.3f}")
                 state = next_state.copy()
                 desired_goal = next_desired_goal.copy()
                 self.env.render()
+            print(f"episode_reward:{episode_reward:3.3f}")
 
         self.env.close()

@@ -38,7 +38,7 @@ os.environ['MKL_NUM_THREADS'] = '1'
 os.environ['IN_MPI'] = '1'
 
 
-def eval_agent(env_, agent_, flag):
+def eval_agent(env_, agent_):
     total_success_rate = []
     running_r = []
     for ep in range(10):
@@ -54,7 +54,6 @@ def eval_agent(env_, agent_, flag):
             g = env_dictionary["desired_goal"]
         ep_r = 0
         for t in range(50):
- 
             with torch.no_grad():
                 a = agent_.choose_action(s, g, train_mode=False)
             observation_new, r, _, info_ = env_.step(a)
@@ -132,7 +131,6 @@ else:
                     state = env_dict["observation"]
                     achieved_goal = env_dict["achieved_goal"]
                     desired_goal = env_dict["desired_goal"]
-                # episode_reward = 0
                 for t in range(50):
                     action = agent.choose_action(state, desired_goal)
                     next_env_dict, reward, done, info = env.step(action)
@@ -149,8 +147,7 @@ else:
                     state = next_state.copy()
                     achieved_goal = next_achieved_goal.copy()
                     desired_goal = next_desired_goal.copy()
-                    # episode_reward += reward
-                # agent.store(dc(episode_dict))
+
                 episode_dict["state"].append(state.copy())
                 episode_dict["achieved_goal"].append(achieved_goal.copy())
                 episode_dict["desired_goal"].append(desired_goal.copy())
@@ -164,22 +161,21 @@ else:
             agent.update_networks()
 
         ram = psutil.virtual_memory()
-        success_rate, running_reward, episode_reward = eval_agent(env, agent, MPI.COMM_WORLD.Get_rank())
-        t_success_rate.append(success_rate)
+        success_rate, running_reward, episode_reward = eval_agent(env, agent)
         if MPI.COMM_WORLD.Get_rank() == 0:
+            t_success_rate.append(success_rate)
             print(f"Epoch:{epoch}| "
                   f"Running_reward:{running_reward[-1]:.3f}| "
                   f"EP_reward:{episode_reward:.3f}| "
-                  # f"state_Mean_STD:{[agent.state_normalizer.mean, agent.state_normalizer.std]}| "
-                  # f"goal_Mean_STD:{[agent.goal_normalizer.mean, agent.goal_normalizer.std]}| "
                   f"Memory_length:{len(agent.memory)}| "
                   f"Duration:{time.time() - start_time:.3f}| "
                   f"Actor_Loss:{actor_loss:.3f}| "
                   f"Critic_Loss:{critic_loss:.3f}| "
                   f"Success rate:{success_rate:.3f}| "
                   f"{to_gb(ram.used):.1f}/{to_gb(ram.total):.1f} GB RAM")
-        agent.save_weights()
+            agent.save_weights()
 
+if MPI.COMM_WORLD.Get_rank() == 0:
     player = Play(env, agent)
     player.evaluate()
 

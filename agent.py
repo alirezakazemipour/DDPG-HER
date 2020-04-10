@@ -130,11 +130,11 @@ class Agent:
                     "state_normalizer_mean": self.state_normalizer.mean,
                     "state_normalizer_std": self.state_normalizer.std,
                     "goal_normalizer_mean": self.goal_normalizer.mean,
-                    "goal_normalizer_std": self.goal_normalizer.std}, "parameters.pth")
+                    "goal_normalizer_std": self.goal_normalizer.std}, "FetchPickAndPlace.pth")
 
     def load_weights(self):
 
-        checkpoint = torch.load("parameters.pth")
+        checkpoint = torch.load("FetchPickAndPlace.pth")
         actor_state_dict = checkpoint["actor_state_dict"]
         self.actor.load_state_dict(actor_state_dict)
         state_normalizer_mean = checkpoint["state_normalizer_mean"]
