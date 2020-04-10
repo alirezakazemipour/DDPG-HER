@@ -18,7 +18,7 @@ MAX_EPOCHS = 50
 MAX_CYCLES = 50
 num_updates = 40
 MAX_EPISODES = 16 // os.cpu_count()
-memory_size = 9000
+memory_size = 7e+5 // 50
 batch_size = 256
 actor_lr = 1e-3
 critic_lr = 1e-3
@@ -38,25 +38,26 @@ os.environ['MKL_NUM_THREADS'] = '1'
 os.environ['IN_MPI'] = '1'
 
 
-def eval_agent(env, agent):
+def eval_agent(env_, agent_, flag):
     total_success_rate = []
     running_r = []
     for ep in range(10):
         per_success_rate = []
-        env_dictionary = env.reset()
+        env_dictionary = env_.reset()
         s = env_dictionary["observation"]
         ag = env_dictionary["achieved_goal"]
         g = env_dictionary["desired_goal"]
         while np.linalg.norm(ag - g) <= 0.05:
-            env_dictionary = env.reset()
+            env_dictionary = env_.reset()
             s = env_dictionary["observation"]
             ag = env_dictionary["achieved_goal"]
             g = env_dictionary["desired_goal"]
         ep_r = 0
         for t in range(50):
+ 
             with torch.no_grad():
-                a = agent.choose_action(s, g, train_mode=False)
-            observation_new, r, _, info_ = env.step(a)
+                a = agent_.choose_action(s, g, train_mode=False)
+            observation_new, r, _, info_ = env_.step(a)
             s = observation_new['observation']
             g = observation_new['desired_goal']
             per_success_rate.append(info_['is_success'])
@@ -109,7 +110,7 @@ else:
                   env=dc(env))
 
     t_success_rate = []
-    for epoch in range(0, MAX_EPOCHS):
+    for epoch in range(MAX_EPOCHS):
         start_time = time.time()
         for cycle in range(0, MAX_CYCLES):
             mb = []
@@ -144,14 +145,17 @@ else:
                     episode_dict["action"].append(action.copy())
                     episode_dict["achieved_goal"].append(achieved_goal.copy())
                     episode_dict["desired_goal"].append(desired_goal.copy())
-                    episode_dict["next_state"].append(next_state.copy())
-                    episode_dict["next_achieved_goal"].append(next_achieved_goal.copy())
 
                     state = next_state.copy()
                     achieved_goal = next_achieved_goal.copy()
                     desired_goal = next_desired_goal.copy()
                     # episode_reward += reward
                 # agent.store(dc(episode_dict))
+                episode_dict["state"].append(state.copy())
+                episode_dict["achieved_goal"].append(achieved_goal.copy())
+                episode_dict["desired_goal"].append(desired_goal.copy())
+                episode_dict["next_state"] = episode_dict["state"][1:]
+                episode_dict["next_achieved_goal"] = episode_dict["achieved_goal"][1:]
                 mb.append(dc(episode_dict))
 
             agent.store(mb)
@@ -160,12 +164,14 @@ else:
             agent.update_networks()
 
         ram = psutil.virtual_memory()
-        success_rate, running_reward, episode_reward = eval_agent(env, agent)
+        success_rate, running_reward, episode_reward = eval_agent(env, agent, MPI.COMM_WORLD.Get_rank())
         t_success_rate.append(success_rate)
         if MPI.COMM_WORLD.Get_rank() == 0:
             print(f"Epoch:{epoch}| "
                   f"Running_reward:{running_reward[-1]:.3f}| "
                   f"EP_reward:{episode_reward:.3f}| "
+                  # f"state_Mean_STD:{[agent.state_normalizer.mean, agent.state_normalizer.std]}| "
+                  # f"goal_Mean_STD:{[agent.goal_normalizer.mean, agent.goal_normalizer.std]}| "
                   f"Memory_length:{len(agent.memory)}| "
                   f"Duration:{time.time() - start_time:.3f}| "
                   f"Actor_Loss:{actor_loss:.3f}| "

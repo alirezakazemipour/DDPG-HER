@@ -16,10 +16,9 @@ class Memory:
     def sample(self, batch_size):
 
         ep_indices = np.random.randint(0, len(self.memory), batch_size)
-        time_indices = np.random.randint(0, len(self.memory[0]["state"]), batch_size)
+        time_indices = np.random.randint(0, len(self.memory[0]["next_state"]), batch_size)
         states = []
         actions = []
-        achieved_goals = []
         desired_goals = []
         next_states = []
         next_achieved_goals = []
@@ -27,22 +26,20 @@ class Memory:
         for episode, timestep in zip(ep_indices, time_indices):
             states.append(dc(self.memory[episode]["state"][timestep]))
             actions.append(dc(self.memory[episode]["action"][timestep]))
-            achieved_goals.append(dc(self.memory[episode]["achieved_goal"][timestep]))
             desired_goals.append(dc(self.memory[episode]["desired_goal"][timestep]))
             next_achieved_goals.append(dc(self.memory[episode]["next_achieved_goal"][timestep]))
             next_states.append(dc(self.memory[episode]["next_state"][timestep]))
 
         states = np.vstack(states)
         actions = np.vstack(actions)
-        achieved_goals = np.vstack(achieved_goals)
         desired_goals = np.vstack(desired_goals)
         next_achieved_goals = np.vstack(next_achieved_goals)
         next_states = np.vstack(next_states)
 
         her_indices = np.where(np.random.uniform(size=batch_size) < self.future_p)
-        future_offset = np.random.uniform(size=batch_size) * (len(self.memory[0]["state"]) - time_indices)
+        future_offset = np.random.uniform(size=batch_size) * (len(self.memory[0]["next_state"]) - time_indices)
         future_offset = future_offset.astype(int)
-        future_t = (time_indices + future_offset)[her_indices]
+        future_t = (time_indices + 1 + future_offset)[her_indices]
 
         future_ag = []
         for episode, f_offset in zip(ep_indices[her_indices], future_t):
@@ -68,9 +65,9 @@ class Memory:
         return np.clip(x, -200, 200)
 
     def sample_for_normalization(self, batch):
-        size = len(batch[0]["state"])
+        size = len(batch[0]["next_state"])
         ep_indices = np.random.randint(0, len(batch), size)
-        time_indices = np.random.randint(0, len(batch[0]["state"]), size)
+        time_indices = np.random.randint(0, len(batch[0]["next_state"]), size)
         states = []
         desired_goals = []
 
@@ -82,9 +79,9 @@ class Memory:
         desired_goals = np.vstack(desired_goals)
 
         her_indices = np.where(np.random.uniform(size=size) < self.future_p)
-        future_offset = np.random.uniform(size=size) * (len(batch[0]["state"]) - time_indices)
+        future_offset = np.random.uniform(size=size) * (len(batch[0]["next_state"]) - time_indices)
         future_offset = future_offset.astype(int)
-        future_t = (time_indices + future_offset)[her_indices]
+        future_t = (time_indices + 1 + future_offset)[her_indices]
 
         future_ag = []
         for episode, f_offset in zip(ep_indices[her_indices], future_t):

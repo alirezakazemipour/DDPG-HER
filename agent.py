@@ -45,10 +45,8 @@ class Agent:
         self.actor_optim = Adam(self.actor.parameters(), self.actor_lr)
         self.critic_optim = Adam(self.critic.parameters(), self.critic_lr)
 
-        self.critic_loss_fn = torch.nn.MSELoss()
-
-        self.state_normalizer = Normalizer(self.n_states[0], 5)
-        self.goal_normalizer = Normalizer(self.n_goals, 5)
+        self.state_normalizer = Normalizer(self.n_states[0], default_clip_range=5)
+        self.goal_normalizer = Normalizer(self.n_goals, default_clip_range=5)
 
     def choose_action(self, state, goal, train_mode=True):
         state = self.state_normalizer.normalize(state)
@@ -109,7 +107,7 @@ class Agent:
             target_returns = torch.clamp(target_returns, -1 / (1 - self.gamma), 0)
 
         q_eval = self.critic(inputs, actions)
-        critic_loss = self.critic_loss_fn(target_returns, q_eval)
+        critic_loss = (target_returns - q_eval).pow(2).mean()
 
         a = self.actor(inputs)
         actor_loss = -self.critic(inputs, a).mean()
@@ -133,11 +131,11 @@ class Agent:
 
     def load_weights(self):
         self.actor.load_state_dict(torch.load("./actor_weights.pth"))
-        self.critic.load_state_dict(torch.load("./critic_weights.pth"))
+        # self.critic.load_state_dict(torch.load("./critic_weights.pth"))
 
     def set_to_eval_mode(self):
         self.actor.eval()
-        self.critic.eval()
+        # self.critic.eval()
 
     def update_networks(self):
         self.soft_update_networks(self.actor, self.actor_target, self.tau)

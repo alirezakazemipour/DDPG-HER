@@ -4,7 +4,7 @@ from torch import device
 class Play:
     def __init__(self, env, agent, max_episode=4):
         self.env = env
-        self.env = gym.wrappers.Monitor(env, "./vid", video_callable=lambda episode_id: True, force=True)
+        # self.env = gym.wrappers.Monitor(env, "./vid", video_callable=lambda episode_id: True, force=True)
         self.max_episode = max_episode
         self.agent = agent
         self.agent.load_weights()
