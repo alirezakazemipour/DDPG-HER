@@ -15,7 +15,6 @@ downloads/
 eggs/
 .eggs/
 .idea/
-*.png
 vid/
 lib/
 lib64/

@@ -176,8 +176,8 @@ else:
             agent.save_weights()
 
 if MPI.COMM_WORLD.Get_rank() == 0:
-    player = Play(env, agent)
-    player.evaluate()
+    # player = Play(env, agent)
+    # player.evaluate()
 
     plt.figure()
     plt.plot(np.arange(0, MAX_EPOCHS), t_success_rate)
