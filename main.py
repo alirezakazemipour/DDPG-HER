@@ -176,14 +176,15 @@ else:
             agent.save_weights()
 
 if MPI.COMM_WORLD.Get_rank() == 0:
-    # player = Play(env, agent)
-    # player.evaluate()
 
     plt.figure()
     plt.plot(np.arange(0, MAX_EPOCHS), t_success_rate)
     plt.grid()
     plt.title("Success rate")
     plt.savefig("success_rate.png")
+    
+    player = Play(env, agent)
+    player.evaluate()
     #
     # plt.subplot(312)
     # plt.plot(np.arange(0, MAX_EPISODES), total_ac_loss)
