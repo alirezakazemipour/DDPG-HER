@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from play import Play
 
-# ENV_NAME = "MountainCarContinuous-v0"
 ENV_NAME = "Pendulum-v0"
 INTRO = False
 MAX_EPISODES = 1000
@@ -34,6 +33,7 @@ if INTRO:
             test_env.render()
 else:
     env = gym.make(ENV_NAME)
+    env.seed(123)
     agent = Agent(n_states=state_shape,
                   action_bounds=action_bounds,
                   capacity=memory_size,
@@ -80,6 +80,7 @@ else:
     player = Play(env, agent)
     player.evaluate()
 
+    plt.style.use('ggplot')
     plt.figure()
     plt.subplot(311)
     plt.plot(np.arange(0, MAX_EPISODES), global_running_r)
