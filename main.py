@@ -73,7 +73,7 @@ def eval_agent(env_, agent_):
 
 
 if INTRO:
-    print(f"state_shape:{state_shape}\n"
+    print(f"state_shape:{state_shape[0]}\n"
           f"number of actions:{n_actions}\n"
           f"action boundaries:{action_bounds}\n"
           f"max timesteps:{test_env._max_episode_steps}")
@@ -109,10 +109,16 @@ else:
                   env=dc(env))
 
     t_success_rate = []
+    total_ac_loss = []
+    total_cr_loss = []
     for epoch in range(MAX_EPOCHS):
         start_time = time.time()
+        epoch_actor_loss = 0
+        epoch_critic_loss = 0
         for cycle in range(0, MAX_CYCLES):
             mb = []
+            cycle_actor_loss = 0
+            cycle_critic_loss = 0
             for episode in range(MAX_EPISODES):
                 episode_dict = {
                     "state": [],
@@ -158,10 +164,17 @@ else:
             agent.store(mb)
             for n_update in range(num_updates):
                 actor_loss, critic_loss = agent.train()
+                cycle_actor_loss += actor_loss
+                cycle_critic_loss += critic_loss
+
+            epoch_actor_loss += cycle_actor_loss / num_updates
+            epoch_critic_loss += cycle_critic_loss /num_updates
             agent.update_networks()
 
         ram = psutil.virtual_memory()
         success_rate, running_reward, episode_reward = eval_agent(env, agent)
+        total_ac_loss.append(epoch_actor_loss)
+        total_cr_loss.append(epoch_critic_loss)
         if MPI.COMM_WORLD.Get_rank() == 0:
             t_success_rate.append(success_rate)
             print(f"Epoch:{epoch}| "
@@ -176,22 +189,23 @@ else:
             agent.save_weights()
 
 if MPI.COMM_WORLD.Get_rank() == 0:
+    # player = Play(env, agent)
+    # player.evaluate()
 
+    plt.style.use('ggplot')
     plt.figure()
+    plt.subplot(311)
     plt.plot(np.arange(0, MAX_EPOCHS), t_success_rate)
     plt.grid()
     plt.title("Success rate")
+
+    plt.subplot(312)
+    plt.plot(np.arange(0, MAX_EPISODES), total_ac_loss)
+    plt.title("Actor loss")
+
+    plt.subplot(313)
+    plt.plot(np.arange(0, MAX_EPISODES), total_cr_loss)
+    plt.title("Critic loss")
+
     plt.savefig("success_rate.png")
-    
-    player = Play(env, agent)
-    player.evaluate()
-    #
-    # plt.subplot(312)
-    # plt.plot(np.arange(0, MAX_EPISODES), total_ac_loss)
-    # plt.title("Actor loss")
-    #
-    # plt.subplot(313)
-    # plt.plot(np.arange(0, MAX_EPISODES), total_cr_loss)
-    # plt.title("Critic loss")
-    #
-    # plt.show()
+    plt.show()
