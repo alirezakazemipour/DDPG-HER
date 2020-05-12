@@ -14,6 +14,8 @@ import torch
 
 ENV_NAME = "FetchPickAndPlace-v1"
 INTRO = False
+Train = False
+Play_FLAG = True
 MAX_EPOCHS = 50
 MAX_CYCLES = 50
 num_updates = 40
@@ -88,25 +90,27 @@ if INTRO:
             #     test_state["achieved_goal"], substitute_goal, test_info)
             # print("r is {}, substitute_reward is {}".format(r, substitute_reward))
             test_env.render()
-else:
-    env = gym.make(ENV_NAME)
-    env.seed(MPI.COMM_WORLD.Get_rank())
-    random.seed(MPI.COMM_WORLD.Get_rank())
-    np.random.seed(MPI.COMM_WORLD.Get_rank())
-    torch.manual_seed(MPI.COMM_WORLD.Get_rank())
-    agent = Agent(n_states=state_shape,
-                  n_actions=n_actions,
-                  n_goals=n_goals,
-                  action_bounds=action_bounds,
-                  capacity=memory_size,
-                  action_size=n_actions,
-                  batch_size=batch_size,
-                  actor_lr=actor_lr,
-                  critic_lr=critic_lr,
-                  gamma=gamma,
-                  tau=tau,
-                  k_future=k_future,
-                  env=dc(env))
+    exit(0)
+
+env = gym.make(ENV_NAME)
+env.seed(MPI.COMM_WORLD.Get_rank())
+random.seed(MPI.COMM_WORLD.Get_rank())
+np.random.seed(MPI.COMM_WORLD.Get_rank())
+torch.manual_seed(MPI.COMM_WORLD.Get_rank())
+agent = Agent(n_states=state_shape,
+              n_actions=n_actions,
+              n_goals=n_goals,
+              action_bounds=action_bounds,
+              capacity=memory_size,
+              action_size=n_actions,
+              batch_size=batch_size,
+              actor_lr=actor_lr,
+              critic_lr=critic_lr,
+              gamma=gamma,
+              tau=tau,
+              k_future=k_future,
+              env=dc(env))
+if Train:
 
     t_success_rate = []
     total_ac_loss = []
@@ -188,24 +192,26 @@ else:
                   f"{to_gb(ram.used):.1f}/{to_gb(ram.total):.1f} GB RAM")
             agent.save_weights()
 
-if MPI.COMM_WORLD.Get_rank() == 0:
-    # player = Play(env, agent)
-    # player.evaluate()
+    if MPI.COMM_WORLD.Get_rank() == 0:
 
-    plt.style.use('ggplot')
-    plt.figure()
-    plt.subplot(311)
-    plt.plot(np.arange(0, MAX_EPOCHS), t_success_rate)
-    plt.grid()
-    plt.title("Success rate")
+        plt.style.use('ggplot')
+        plt.figure()
+        plt.subplot(311)
+        plt.grid()
+        plt.plot(np.arange(0, MAX_EPOCHS), t_success_rate)
+        plt.title("Success rate")
 
-    plt.subplot(312)
-    plt.plot(np.arange(0, MAX_EPISODES), total_ac_loss)
-    plt.title("Actor loss")
+        plt.subplot(312)
+        plt.plot(np.arange(0, MAX_EPOCHS), total_ac_loss)
+        plt.title("Actor loss")
 
-    plt.subplot(313)
-    plt.plot(np.arange(0, MAX_EPISODES), total_cr_loss)
-    plt.title("Critic loss")
+        plt.subplot(313)
+        plt.plot(np.arange(0, MAX_EPOCHS), total_cr_loss)
+        plt.title("Critic loss")
 
-    plt.savefig("success_rate.png")
-    plt.show()
+        plt.savefig("success_rate.png")
+        plt.show()
+
+elif Play_FLAG:
+    player = Play(env, agent, max_episode=100)
+    player.evaluate()

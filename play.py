@@ -1,12 +1,18 @@
 import torch
 from torch import device
 import numpy as np
+import cv2
+from gym import wrappers
+from mujoco_py import GlfwContext
+GlfwContext(offscreen=True)
+
+from mujoco_py.generated import const
 
 
 class Play:
     def __init__(self, env, agent, max_episode=4):
         self.env = env
-        # self.env = gym.wrappers.Monitor(env, "./vid", video_callable=lambda episode_id: True, force=True)
+        self.env = wrappers.Monitor(env, "./videos", video_callable=lambda episode_id: True, force=True)
         self.max_episode = max_episode
         self.agent = agent
         self.agent.load_weights()
@@ -35,7 +41,12 @@ class Play:
                 episode_reward += r
                 state = next_state.copy()
                 desired_goal = next_desired_goal.copy()
-                self.env.render()
+                I = self.env.render(mode="human")
+                self.env.viewer.cam.type = const.CAMERA_FREE
+                # self.env.viewer.cam.fixedcamid = 0
+                # I = cv2.cvtColor(I, cv2.COLOR_RGB2BGR)
+                # cv2.imshow("I", I)
+                # cv2.waitKey(2)
             print(f"episode_reward:{episode_reward:3.3f}")
 
         self.env.close()
