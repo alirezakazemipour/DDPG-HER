@@ -1,6 +1,7 @@
 import gym
 from agent import Agent
 import matplotlib.pyplot as plt
+from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 from play import Play
 import mujoco_py
@@ -14,8 +15,8 @@ import torch
 
 ENV_NAME = "FetchPickAndPlace-v1"
 INTRO = False
-Train = False
-Play_FLAG = True
+Train = True
+Play_FLAG = False
 MAX_EPOCHS = 50
 MAX_CYCLES = 50
 num_updates = 40
@@ -194,20 +195,24 @@ if Train:
 
     if MPI.COMM_WORLD.Get_rank() == 0:
 
+        with SummaryWriter("logs") as writer:
+            for i, success_rate in enumerate(t_success_rate):
+                writer.add_scalar("Success_rate", success_rate, i)
+
         plt.style.use('ggplot')
         plt.figure()
-        plt.subplot(311)
-        plt.grid()
+        # plt.subplot(311)
+        # plt.grid()
         plt.plot(np.arange(0, MAX_EPOCHS), t_success_rate)
         plt.title("Success rate")
 
-        plt.subplot(312)
-        plt.plot(np.arange(0, MAX_EPOCHS), total_ac_loss)
-        plt.title("Actor loss")
-
-        plt.subplot(313)
-        plt.plot(np.arange(0, MAX_EPOCHS), total_cr_loss)
-        plt.title("Critic loss")
+        # plt.subplot(312)
+        # plt.plot(np.arange(0, MAX_EPOCHS), total_ac_loss)
+        # plt.title("Actor loss")
+        #
+        # plt.subplot(313)
+        # plt.plot(np.arange(0, MAX_EPOCHS), total_cr_loss)
+        # plt.title("Critic loss")
 
         plt.savefig("success_rate.png")
         plt.show()

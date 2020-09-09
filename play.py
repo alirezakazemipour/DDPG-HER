@@ -4,6 +4,7 @@ import numpy as np
 import cv2
 from gym import wrappers
 from mujoco_py import GlfwContext
+
 GlfwContext(offscreen=True)
 
 from mujoco_py.generated import const
@@ -41,8 +42,8 @@ class Play:
                 episode_reward += r
                 state = next_state.copy()
                 desired_goal = next_desired_goal.copy()
-                I = self.env.render(mode="human")
-                self.env.viewer.cam.type = const.CAMERA_FREE
+                I = self.env.render(mode="human")  # mode = "rgb_array
+                # self.env.viewer.cam.type = const.CAMERA_FREE
                 # self.env.viewer.cam.fixedcamid = 0
                 # I = cv2.cvtColor(I, cv2.COLOR_RGB2BGR)
                 # cv2.imshow("I", I)
