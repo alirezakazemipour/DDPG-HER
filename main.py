@@ -15,8 +15,8 @@ import torch
 
 ENV_NAME = "FetchPickAndPlace-v1"
 INTRO = False
-Train = True
-Play_FLAG = False
+Train = False
+Play_FLAG = True
 MAX_EPOCHS = 50
 MAX_CYCLES = 50
 num_updates = 40
