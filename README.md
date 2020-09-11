@@ -3,14 +3,19 @@ Implementation of the deep deterministic policy gradient with hindsight experien
 > Visit [vanilla_DDPG](https://github.com/alirezakazemipour/DDPG-her/tree/vanilla_DDPG) branch for the implementation without the HER extention.  
 
 ## Dependencies  
-gym == 0.17.2  
-matplotlib == 3.1.2  
-mpi4py == 3.0.3  
-mujoco-py == 2.0.2.13  
-numpy == 1.19.1  
-opencv_contrib_python == 3.4.0.12  
-psutil == 5.4.2  
-torch == 1.4.0  
+- gym == 0.17.2  
+- matplotlib == 3.1.2  
+- mpi4py == 3.0.3  
+- mujoco-py == 2.0.2.13  
+- numpy == 1.19.1  
+- opencv_contrib_python == 3.4.0.12  
+- psutil == 5.4.2  
+- torch == 1.4.0  
+
+## Installation
+```shell
+pip3 install -r requirements.txt
+```
 
 ## Usage
 ```shell
