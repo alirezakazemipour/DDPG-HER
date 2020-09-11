@@ -1,6 +1,6 @@
 # DDPG
 Implementation of the deep deterministic policy gradient with hindsight experience replay extension on mujoco robotic FetchPickAndPlace environment.   
-> Visit [vanilla_DDPG](https://github.com/alirezakazemipour/DDPG-her/tree/vanilla_DDPG) branch for the implementation without the HER extention.  
+> Visit [vanilla_DDPG](https://github.com/alirezakazemipour/DDPG-her/tree/vanilla_DDPG) branch for the implementation **without the HER extention**.  
 
 ## Dependencies  
 - gym == 0.17.2  
