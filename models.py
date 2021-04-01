@@ -21,27 +21,9 @@ class Actor(nn.Module):
         super(Actor, self).__init__()
 
         self.fc1 = nn.Linear(in_features=self.n_states + self.n_goals, out_features=self.n_hidden1)
-        # nn.init.kaiming_normal_(self.fc1.weight)
-        # self.fc1.bias.data.zero_()
         self.fc2 = nn.Linear(in_features=self.n_hidden1, out_features=self.n_hidden2)
-        # nn.init.kaiming_normal_(self.fc2.weight)
-        # self.fc2.bias.data.zero_()
         self.fc3 = nn.Linear(in_features=self.n_hidden2, out_features=self.n_hidden3)
-        # nn.init.kaiming_normal_(self.fc3.weight)
-        # self.fc3.bias.data.zero_()
         self.output = nn.Linear(in_features=self.n_hidden3, out_features=self.n_actions)
-        # nn.init.xavier_uniform_(self.output.weight)
-        # self.output.bias.data.zero_()
-
-        # self.fc1.weight.data = init_weights_biases(self.fc1.weight.data.size())
-        # self.fc1.bias.data = init_weights_biases(self.fc1.bias.data.size())
-        # self.fc2.weight.data = init_weights_biases(self.fc2.weight.data.size())
-        # self.fc2.bias.data = init_weights_biases(self.fc2.bias.data.size())
-        # self.fc3.weight.data = init_weights_biases(self.fc3.weight.data.size())
-        # self.fc3.bias.data = init_weights_biases(self.fc3.bias.data.size())
-
-    # self.output.weight.data.uniform_(-self.initial_w, self.initial_w)
-    # self.output.bias.data.uniform_(-self.initial_w, self.initial_w)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -64,27 +46,9 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
 
         self.fc1 = nn.Linear(in_features=self.n_states + self.n_goals + self.action_size, out_features=self.n_hidden1)
-        # nn.init.kaiming_normal_(self.fc1.weight)
-        # self.fc1.bias.data.zero_()
         self.fc2 = nn.Linear(in_features=self.n_hidden1, out_features=self.n_hidden2)
-        # nn.init.kaiming_normal_(self.fc2.weight)
-        # self.fc2.bias.data.zero_()
         self.fc3 = nn.Linear(in_features=self.n_hidden2, out_features=self.n_hidden3)
-        # nn.init.kaiming_normal_(self.fc3.weight)
-        # self.fc3.bias.data.zero_()
         self.output = nn.Linear(in_features=self.n_hidden3, out_features=1)
-        # nn.init.xavier_uniform_(self.output.weight)
-        # self.output.bias.data.zero_()
-
-        # self.fc1.weight.data = init_weights_biases(self.fc1.weight.data.size())
-        # self.fc1.bias.data = init_weights_biases(self.fc1.bias.data.size())
-        # self.fc2.weight.data = init_weights_biases(self.fc2.weight.data.size())
-        # self.fc2.bias.data = init_weights_biases(self.fc2.bias.data.size())
-        # self.fc3.weight.data = init_weights_biases(self.fc3.weight.data.size())
-        # self.fc3.bias.data = init_weights_biases(self.fc3.bias.data.size())
-        #
-        # self.output.weight.data.uniform_(-self.initial_w, self.initial_w)
-        # self.output.bias.data.uniform_(-self.initial_w, self.initial_w)
 
     def forward(self, x, a):
         x = F.relu(self.fc1(torch.cat([x, a], dim=-1)))

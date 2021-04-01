@@ -201,19 +201,8 @@ if Train:
 
         plt.style.use('ggplot')
         plt.figure()
-        # plt.subplot(311)
-        # plt.grid()
         plt.plot(np.arange(0, MAX_EPOCHS), t_success_rate)
         plt.title("Success rate")
-
-        # plt.subplot(312)
-        # plt.plot(np.arange(0, MAX_EPOCHS), total_ac_loss)
-        # plt.title("Actor loss")
-        #
-        # plt.subplot(313)
-        # plt.plot(np.arange(0, MAX_EPOCHS), total_cr_loss)
-        # plt.title("Critic loss")
-
         plt.savefig("success_rate.png")
         plt.show()
 
